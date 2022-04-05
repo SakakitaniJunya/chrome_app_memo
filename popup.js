@@ -1,4 +1,7 @@
-let checkValue = 1;
+
+//変数宣言
+let checkValue = '1';
+const storage = chrome.storage.sync;
 document.addEventListener('change', function() {
 
   function key_storage() {
@@ -8,6 +11,7 @@ document.addEventListener('change', function() {
     }
   }
   key_storage()
+
   const RadioButton = document.getElementById("RadioButton");
   const Radio = document.getElementsByName("radio1");
   let len = Radio.length;
@@ -18,26 +22,65 @@ document.addEventListener('change', function() {
   let element = document.getElementById('text');
 
 
-  console.log(checkValue);
+
   console.log(element.value);
 
   //情報の登録
-  chrome.storage.sync.set({checkValue: element});
+  //chrome.storage.sync.set({checkValue: element});
+
+
+
+
+  const storage = chrome.storage.sync;
+
+
+  //console.log(checkValue);
+
+  // storage.set({checkValue: element.value}, function() {
+  //   storage.get(function(e) {
+  //     console.log(e);
+  //   });
+  // });
+
+    //ラジオボタン番号取得
+    for (let i = 1; i <= len; i++) {
+
+        checkValue = i;
+        chrome.storage.sync.set({checkValue: checkValue});
+    };
+
+
+    for (let i = 1; i <= len; i++) {
+      chrome.storage.sync.get(' + checkValue + ', function(result){
+        console.log('Value currently is ' + result.key)
+    });
+  }
+
 
   //ラジオボタン番号取得
   for (let i = 0; i < len; i++) {
     if(Radio.item(i).checked){
       checkValue = Radio.item(i).value;
-
+      chrome.storage.sync.set({checkValue: checkValue})
     }
   }
-  chrome.storage.local.set({key: "aaa"}, function() {
-    console.log('Value is set to ' + value);
-  });
 
-  chrome.storage.local.get(['key'], function(result) {
-    console.log('Value currently is ' + result.key);
-  });
+  for (let i = 0; i < len; i++) {
+    if(Radio.item(i).checked){
+      checkValue = Radio.item(i).value;
+      chrome.storage.sync.get(checkValue, function(result){
+        console.log('Value currently is ' + result.key);
+      })
+    }
+  }
+
+  // chrome.storage.local.set({key: "aaa"}, function() {
+  //   console.log('Value is set to ' + value);
+  // });
+
+  // chrome.storage.local.get(['key'], function(result) {
+  //   console.log('Value currently is ' + result.key);
+  // });
 
   console.log(checkValue);
 
