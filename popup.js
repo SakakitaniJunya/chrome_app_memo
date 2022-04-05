@@ -4,13 +4,13 @@ let checkValue = '1';
 const storage = chrome.storage.sync;
 document.addEventListener('change', function() {
 
-  function key_storage() {
-    for (let i = 0; i < 6; i++) {
-      chrome.storage.sync.set({i : ''});
-      console.log("test");
-    }
-  }
-  key_storage()
+  // function key_storage() {
+  //   for (let i = 0; i < 6; i++) {
+  //     chrome.storage.sync.set({i : ''});
+  //     console.log("test");
+  //   }
+  // }
+  // key_storage()
 
   const RadioButton = document.getElementById("RadioButton");
   const Radio = document.getElementsByName("radio1");
@@ -26,13 +26,7 @@ document.addEventListener('change', function() {
   console.log(element.value);
 
   //情報の登録
-  //chrome.storage.sync.set({checkValue: element});
-
-
-
-
-  const storage = chrome.storage.sync;
-
+  chrome.storage.local.set({checkValue: element});
 
   //console.log(checkValue);
 
@@ -43,33 +37,27 @@ document.addEventListener('change', function() {
   // });
 
     //ラジオボタン番号取得
-    for (let i = 1; i <= len; i++) {
+    // for (let i = 1; i <= len; i++) {
 
-        checkValue = i;
-        chrome.storage.sync.set({checkValue: checkValue});
-    };
+    //     checkValue = i;
+    //     chrome.storage.sync.set({checkValue: checkValue});
+    // };
 
-
-    for (let i = 1; i <= len; i++) {
-      chrome.storage.sync.get(' + checkValue + ', function(result){
-        console.log('Value currently is ' + result.key)
-    });
-  }
 
 
   //ラジオボタン番号取得
-  for (let i = 0; i < len; i++) {
-    if(Radio.item(i).checked){
-      checkValue = Radio.item(i).value;
-      chrome.storage.sync.set({checkValue: checkValue})
-    }
-  }
+  // for (let i = 0; i < len; i++) {
+  //   if(Radio.item(i).checked){
+  //     checkValue = Radio.item(i).value;
+  //     chrome.storage.sync.set({checkValue: checkValue})
+  //   }
+  // }
 
   for (let i = 0; i < len; i++) {
     if(Radio.item(i).checked){
       checkValue = Radio.item(i).value;
-      chrome.storage.sync.get(checkValue, function(result){
-        console.log('Value currently is ' + result.key);
+      chrome.storage.local.get(checkValue, function(result){
+        console.log('Value currently is ' + result);
       })
     }
   }
@@ -82,7 +70,7 @@ document.addEventListener('change', function() {
   //   console.log('Value currently is ' + result.key);
   // });
 
-  console.log(checkValue);
+  //console.log(checkValue);
 
   //  //select
   //  chrome.stroage.sync.get(1, ({result}) => {
