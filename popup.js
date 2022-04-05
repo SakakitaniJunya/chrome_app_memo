@@ -31,14 +31,25 @@ document.addEventListener('change', function() {
 
     }
   }
+  chrome.storage.local.set({key: "aaa"}, function() {
+    console.log('Value is set to ' + value);
+  });
+
+  chrome.storage.local.get(['key'], function(result) {
+    console.log('Value currently is ' + result.key);
+  });
 
   console.log(checkValue);
 
-  // //select
-   chrome.stroage.sync.get(1, ({result}) => {
-     //document.getElementById('text') = result.key;
-     console.log('Value currently is ' + result.key);
-   });
+  //  //select
+  //  chrome.stroage.sync.get(1, ({result}) => {
+  //    //document.getElementById('text') = result.key;
+  //    console.log('Value currently is ' + result.key);
+  //  });
+
+
+
+
 
   // chrome.storage.sync.get(['key'], function(result) {
   //   console.log('Value currently is ' + result.key);
