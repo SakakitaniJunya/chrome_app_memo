@@ -1,56 +1,57 @@
+document.addEventListener("DOMContentLoaded", function(){
+  //RadioButton
+  const Radio = document.getElementById("RadioButton");
+  Radio.addEventListener('change', () => {
 
-//変数宣言
-let checkValue = '1';
-const storage = chrome.storage.sync;
+    //document.addEventListener('change', () => {
 
-document.addEventListener('click', () => {
+      let checkValue = 0;
+      let checkedValue = 1;
+      let text = '';
+      let newKeyName = '';
+      let oldKeyName = '';
 
-  const RadioButton = document.getElementById("RadioButton");
-  const Radio = document.getElementsByName("radio1");
-  let len = Radio.length;
+      console.log('start');
 
-  //テキスト取得
-  let element = document.getElementById('text');
+      //1. 選択されていた値取得
+      chrome.storage.sync.get(["checkedValue"], (value) => {
+        console.log('checkedValue : ' + value.checkedValue);
+        checkedValue = value.checkedValue;
+      });
 
-  console.log(element.value);
-  console.log(checkValue);
+      //2. テェックされているラジオボタンの値を取得
+      const Radio = document.getElementsByName("radio1");
+      const len = Radio.length;
 
-  //情報の登録
-  chrome.storage.sync.set({checkValue: element.value}, function() {
-    console.log(checkValue);
-    console.log('Value is set to '  + element.value + ':' + checkValue);
-  });
+      for (let i = 0; i < len; i++) {
+        if(Radio.item(i).checked) {
+          checkValue = Radio.item(i).value;
+          console.log('チェックした値 : ' + checkValue);
+        }
+      }
 
-  for (let i = 0; i < len; i++) {
-    if(Radio.item(i).checked){
-      checkValue = Radio.item(i).value;
-      chrome.storage.sync.get(checkValue, ({ result }) => {
-        console.log('Value currently is ' + result);
-      })
-    }
-  }
+      //3. テキストの入力値を取得
+      text = document.getElementById("text");
+      console.log('テキストに入力された情報 : ' + text.value);
 
+      //4. 入力値を登録
+      console.log(checkedValue);
+      oldKeyName = 'key' + `${checkedValue}`;
 
-
-
-  //console.log(checkValue);
-
-  //  //select
-  //  chrome.stroage.sync.get(1, ({result}) => {
-  //    //document.getElementById('text') = result.key;
-  //    console.log('Value currently is ' + result.key);
-  //  });
-
-
+      let keyName = 'key' + `${checkedValue}`;
+      chrome.storage.sync.set({oldKeyName : text});
 
 
+      //5. 選択されたラジオの情報を取得
+      newKeyName = 'key' + `${checkValue}`;
+      chrome.storage.sync.get([newKeyName], (value)=> {
+        console.log("これをテキストボックスにセットしたら完了：" + value);
+        //6. 選択したテキストをセット
+        document.getElementById("text").value = value;
+      });
 
-  // chrome.storage.sync.get(['key'], function(result) {
-  //   console.log('Value currently is ' + result.key);
-  // });
-
-  // console.log('222');
-  // console.log(RadioButton.value);
-
+      //7. 選択したラジオを登録
+      chrome.storage.sync.set({ 'checkedValue': checkValue });
+      chrome.storage.sync.set({'checkedValue': 1});
+    });
 });
-
