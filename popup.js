@@ -44,28 +44,31 @@ document.addEventListener("DOMContentLoaded", function(){
         //こいつが遅い
         await chrome.storage.sync.set({[oldKeyName] : text}, (value) => {
           console.log("登録情報" + value);
-        });
 
 
 
-        //5. 選択されたラジオの情報を取得
-        newKeyName = 'key' + `${checkValue}`;
-        console.log('セットしたいキー' + newKeyName);
+
+            //5. 選択されたラジオの情報を取得
+          newKeyName = 'key' + `${checkValue}`;
+          console.log('セットしたいキー' + newKeyName);
 
 
-        // const testkey = "testkey"
-        // await chrome.storage.sync.set({[testkey] : "登録しました"}, (value) => {
-        //   console.log("テスト" + value);
-        // });
-        await chrome.storage.sync.get([newKeyName], (value)=> {
-          console.log("これをテキストボックスにセットしたら完了：" + value.newKeyName + "格納したキー:" + value);
-          //6. 選択したテキストをセット
-          //ここがうまく行っていない
-          document.getElementById("text").value = value.newKeyName;
-       });
+          // const testkey = "testkey"
+          // await chrome.storage.sync.set({[testkey] : "登録しました"}, (value) => {
+          //   console.log("テスト" + value);
+          // });
+          chrome.storage.sync.get([newKeyName], (value)=> {
+            console.log("これをテキストボックスにセットしたら完了：" + value.newKeyName + "格納したキー:" + value);
+            //6. 選択したテキストをセット
+            //ここがうまく行っていない
+            document.getElementById("text").value = value.newKeyName;
+          });
 
-       //7. 選択したラジオを登録
-       await chrome.storage.sync.set({'checkedValue': checkValue });
+          //7. 選択したラジオを登録
+         chrome.storage.sync.set({'checkedValue': checkValue });
+
+          });
+
       });
 
 
