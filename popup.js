@@ -1,6 +1,9 @@
 document.addEventListener("DOMContentLoaded", function(){
   //RadioButton
   const Radio = document.getElementById("RadioButton");
+
+  try {
+
   Radio.addEventListener('change', async() => {
 
     //document.addEventListener('change', () => {
@@ -11,10 +14,11 @@ document.addEventListener("DOMContentLoaded", function(){
       let newKeyName = '';
       let oldKeyName = '';
 
+
       console.log('start');
 
       //1. 選択されていた値取得
-      chrome.storage.sync.get(["checkedValue"], async(value) => {
+    chrome.storage.sync.get(["checkedValue"], async (value) => {
         console.log('checkedValue 格納してたやつ : ' + value.checkedValue);
         checkedValue = value.checkedValue;
            //2. テェックされているラジオボタンの値を取得
@@ -34,7 +38,7 @@ document.addEventListener("DOMContentLoaded", function(){
         radioCheck();
         //3. テキストの入力値を取得
         textElement = document.getElementById("text");
-        const text = textElement.value
+        text = textElement.value
         console.log('テキストに入力された情報 : ' + text.value);
         //4. 入力値を登録
         console.log(checkedValue);
@@ -42,32 +46,27 @@ document.addEventListener("DOMContentLoaded", function(){
         console.log(oldKeyName);
 
         //こいつが遅い
-        await chrome.storage.sync.set({[oldKeyName] : text}, (value) => {
+        await chrome.storage.sync.set({[oldKeyName] : text}, async(value) => {
           console.log("登録情報" + value);
+        });
+
+        //5. 選択されたラジオの情報を取得
+        newKeyName = 'key' + `${checkValue}`;
+        await console.log('セットしたいキー' + newKeyName);
 
 
 
-
-            //5. 選択されたラジオの情報を取得
-          newKeyName = 'key' + `${checkValue}`;
-          console.log('セットしたいキー' + newKeyName);
-
-
-          // const testkey = "testkey"
-          // await chrome.storage.sync.set({[testkey] : "登録しました"}, (value) => {
-          //   console.log("テスト" + value);
-          // });
-          chrome.storage.sync.get([newKeyName], (value)=> {
-            console.log("これをテキストボックスにセットしたら完了：" + value.newKeyName + "格納したキー:" + value);
-            //6. 選択したテキストをセット
-            //ここがうまく行っていない
-            document.getElementById("text").value = value.newKeyName;
-          });
+        await chrome.storage.sync.get([newKeyName], (value)=> {
+          console.log("これをテキストボックスにセットしたら完了：" + value.newKeyName + "格納したキー:" + value);
+          //6. 選択したテキストをセット
+          //ここがうまく行っていない
+          document.getElementById("text").value = value.newKeyName;
+        });
 
           //7. 選択したラジオを登録
-         chrome.storage.sync.set({'checkedValue': checkValue });
+         await chrome.storage.sync.set({'checkedValue': checkValue });
 
-          });
+
 
       });
 
@@ -77,4 +76,9 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
     });
+
+    //エラー処理
+  } catch(e) {
+    console.log("エラー発生：" + e.message);
+  }
 });
