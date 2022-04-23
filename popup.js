@@ -1,84 +1,67 @@
 document.addEventListener("DOMContentLoaded", function(){
-  //RadioButton
-  const Radio = document.getElementById("RadioButton");
-
-  try {
-
-  Radio.addEventListener('change', async() => {
-
-    //document.addEventListener('change', () => {
-
-      let checkValue = 0;
-      let checkedValue = 1;
-      let text = '';
-      let newKeyName = '';
-      let oldKeyName = '';
+  //ラジオボタン取得
+  //const Radio = document.getElementById("RadioButton");
 
 
-      console.log('start');
+  Radio.addEventListener('change', () => {
 
-      //1. 選択されていた値取得
-    chrome.storage.sync.get(["checkedValue"], async (value) => {
+    //変数宣言
+    let newRadioBtn = 0; //前回選択した
+    let oldRadioBtn = 1; //選択したラジオボタン
+    let text = '';       //登録したテキスト内容
+    let newKeyName = ''; //登録内容を保存するkey
+    let oldKeyName = ''; //登録内容を記録するkey
+
+    console.log('start');
+    const Radio = document.getElementsByName("radio1");
+    const len = Radio.length; //ラジオボタンの数
+
+
+
+    for (let i = 0; i < len; i++) {
+      if(Radio.item(i).checked) {
+        newRadioBtn = Radio.item(i).value;
+        console.log('チェックした値 : ' + newRadioBtn);
+      }
+
+    }
+
+
+    const getOldRadioBtn = () => {
+      chrome.storage.sync.get(["checkedValue"], async (value) => {
         console.log('checkedValue 格納してたやつ : ' + value.checkedValue);
-        checkedValue = value.checkedValue;
-           //2. テェックされているラジオボタンの値を取得
-        const Radio = document.getElementsByName("radio1");
-        const len = Radio.length;
+        oldRadioBtn = value.checkedValue;
+      })
+    };
 
-        const radioCheck = () => {
-
-        for (let i = 0; i < len; i++) {
-          if(Radio.item(i).checked) {
-            checkValue = Radio.item(i).value;
-            console.log('チェックした値 : ' + checkValue);
-          }
-          }
-        }
-
-        radioCheck();
-        //3. テキストの入力値を取得
-        textElement = document.getElementById("text");
-        text = textElement.value
-        console.log('テキストに入力された情報 : ' + text.value);
-        //4. 入力値を登録
-        console.log(checkedValue);
-        oldKeyName = 'key' + `${checkedValue}`;
-        console.log(oldKeyName);
-
-        //こいつが遅い
-        await chrome.storage.sync.set({[oldKeyName] : text}, async(value) => {
-          console.log("登録情報" + value);
-        });
-
-        //5. 選択されたラジオの情報を取得
-        newKeyName = 'key' + `${checkValue}`;
-        await console.log('セットしたいキー' + newKeyName);
+    const setNewRadioBtn = (newRadioBtn) => {
 
 
 
-        await chrome.storage.sync.get([newKeyName], (value)=> {
-          console.log("これをテキストボックスにセットしたら完了：" + value.newKeyName + "格納したキー:" + value);
-          //6. 選択したテキストをセット
-          //ここがうまく行っていない
-          document.getElementById("text").value = value.newKeyName;
-        });
+    }
 
-          //7. 選択したラジオを登録
-         await chrome.storage.sync.set({'checkedValue': checkValue });
+    const registrateContent = (text, newRadioBtn) => {
+    document.getElementById("text").value = value.newKeyName;
 
+    }
 
+    const getSavedContent = (oldRadioBtn) => {
 
-      });
+    }
 
+    try {
+      const firstResult = await getOldRadioBtn()
+      const secondResult = await getOldRadioBtn(firstResult)
+      const thirdResult = await getOldRadioBtn(secondResult)
+      const finalResult = await getOldRadioBtn(thirdResult)
+      console.log(`Got the final result: ${finalResult}`);
 
-      // storage.syncの場合
-      await chrome.storage.sync.get(null, ((data) => {console.log(data)}));
+    } catch(error) {
 
+      console.log(`failed : ${error}`);
+
+    }
 
     });
 
-    //エラー処理
-  } catch(e) {
-    console.log("エラー発生：" + e.message);
-  }
 });
