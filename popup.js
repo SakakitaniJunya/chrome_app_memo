@@ -1,9 +1,9 @@
 document.addEventListener("DOMContentLoaded", function(){
   //ラジオボタン取得
-  //const Radio = document.getElementById("RadioButton");
+  const Radio = document.getElementById("RadioButton");
 
 
-  Radio.addEventListener('change', () => {
+  Radio.addEventListener('change', async () => {
 
     //変数宣言
     let newRadioBtn = 0; //前回選択した
@@ -16,8 +16,6 @@ document.addEventListener("DOMContentLoaded", function(){
     const Radio = document.getElementsByName("radio1");
     const len = Radio.length; //ラジオボタンの数
 
-
-
     for (let i = 0; i < len; i++) {
       if(Radio.item(i).checked) {
         newRadioBtn = Radio.item(i).value;
@@ -28,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function(){
 
 
     const getOldRadioBtn = () => {
-      chrome.storage.sync.get(["checkedValue"], async (value) => {
+      chrome.storage.sync.get(["checkedValue"],  (value) => {
         console.log('checkedValue 格納してたやつ : ' + value.checkedValue);
         oldRadioBtn = value.checkedValue;
       })
@@ -37,9 +35,8 @@ document.addEventListener("DOMContentLoaded", function(){
     const setNewRadioBtn = (newRadioBtn) => {
 
 
-
     }
-
+j
     const registrateContent = (text, newRadioBtn) => {
     document.getElementById("text").value = value.newKeyName;
 
