@@ -15,3 +15,10 @@ document.addEventListener("DOMContentLoaded", function(){
        ○ document.getElementsById("price-input");
   getElementsbyClassNameで取得できるのは,HTMLCollectionというオブジェクト
   HTMLCollectionは複数ノード
+
+
+
+Branch情報
+develop 最新ソース
+feature_develop　動き自体はうまく行ってる
+feature_debag_async

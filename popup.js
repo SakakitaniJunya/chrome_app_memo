@@ -2,11 +2,8 @@ document.addEventListener("DOMContentLoaded", function(){
   //RadioButton
   const Radio = document.getElementById("RadioButton");
 
-  try {
 
   Radio.addEventListener('change', async() => {
-
-    //document.addEventListener('change', () => {
 
       let checkValue = 0;
       let checkedValue = 1;
@@ -16,7 +13,29 @@ document.addEventListener("DOMContentLoaded", function(){
 
       console.log('start');
 
-      //1. 選択されていた値取得
+      //1. 入力・選択した値取得
+      //選択されたラジオボタン取得
+
+
+      //--以下非同期が必要な処理
+      //2. 選択されていた値取得
+      const getOldRadioBtn = () => {
+
+      }
+
+      //3. 選択されていた番号に情報を格納
+      const setValue = () => {
+
+      }
+      //4. 選択された番号の保存情報を取得する
+      const getOldValue = () => {
+
+      }
+      //4. 選択された番号に入力値をセット
+      const setNewValue = () => {
+
+      }
+
       chrome.storage.sync.get(["checkedValue"], async (value) => {
         console.log('checkedValue 格納してたやつ : ' + value.checkedValue);
         checkedValue = value.checkedValue;
@@ -76,8 +95,5 @@ document.addEventListener("DOMContentLoaded", function(){
 
     });
 
-    //エラー処理
-  } catch(e) {
-    console.log("エラー発生：" + e.message);
-  }
+
 });
