@@ -15,82 +15,78 @@ document.addEventListener("DOMContentLoaded", function(){
 
       //1. 入力・選択した値取得
       //選択されたラジオボタン取得
+      const Radio = document.getElementsByName("radio1");
+      const len = Radio.length;
+
+      for (let i = 0; i < len; i++) {
+        if(Radio.item(i).checked) {
+          checkValue = Radio.item(i).value;
+          console.log('チェックした値 : ' + checkValue);
+        }
+      }
+      //3. テキストの入力値を取得
+      textElement = document.getElementById("text");
+      text = textElement.value
+      console.log('テキストに入力された情報 : ' + text);
+
+
+      //5. 選択されたラジオの情報を取得
+      newKeyName = 'key' + `${checkValue}`;
+      console.log('newkey' + newKeyName);
 
 
       //--以下非同期が必要な処理
       //2. 選択されていた値取得
       const getOldRadioBtn = () => {
+        chrome.storage.sync.get(["checkedValue"], (value) => {
+          console.log('checkedValue 格納してたやつ1 : ' + value.checkedValue);
+          checkedValue = value.checkedValue;
+             //2. テェックされているラジオボタンの値を取得
+           oldKeyName = 'key' + `${checkedValue}`;
 
+        })
+        return Promise.resolve(1);
       }
-
       //3. 選択されていた番号に情報を格納
       const setValue = () => {
-
+        //chrome.storage.sync.set({ [keyName] : keyName }) ;
+        chrome.storage.sync.set({ [oldKeyName] : oldKeyName} );
+        //   , () => {
+        console.log('oldkeyname:2 ' + `${oldKeyName}` + `${text}` );
+        // });
+        return Promise.resolve(1)
       }
       //4. 選択された番号の保存情報を取得する
       const getOldValue = () => {
-
+        chrome.storage.sync.set({'checkedValue': checkValue });
+        return Promise.resolve(1)
       }
-      //4. 選択された番号に入力値をセット
+      //5. 選択された番号に入力値をセット
       const setNewValue = () => {
+        console.log(newKeyName);
+        chrome.storage.sync.get([newKeyName], (value)=> {
+          console.log("これをテキストボックスにセットしたら完了：" + value[newKeyName] + "格納したキー:" + value);
+          //6. 選択したテキストをセット
 
+          document.getElementById("text").value = value[newKeyName];
+        });
+        return Promise.resolve(1)
       }
 
-      chrome.storage.sync.get(["checkedValue"], async (value) => {
-        console.log('checkedValue 格納してたやつ : ' + value.checkedValue);
-        checkedValue = value.checkedValue;
-           //2. テェックされているラジオボタンの値を取得
-        const Radio = document.getElementsByName("radio1");
-        const len = Radio.length;
 
-        const radioCheck = () => {
+      //7. storage.syncの場合
+      const test = () => {
+        chrome.storage.sync.get(null, ((data) => {console.log(data)}));
+        console.log('最後');
+        return Promise.resolve(1)
+      }
 
-        for (let i = 0; i < len; i++) {
-          if(Radio.item(i).checked) {
-            checkValue = Radio.item(i).value;
-            console.log('チェックした値 : ' + checkValue);
-          }
-          }
-        }
+      await getOldRadioBtn();
+      await setValue();
+      await getOldValue();
+      await setNewValue();
+      await test();
 
-        radioCheck();
-        //3. テキストの入力値を取得
-        textElement = document.getElementById("text");
-        text = textElement.value
-        console.log('テキストに入力された情報 : ' + text.value);
-        //4. 入力値を登録
-        console.log(checkedValue);
-        oldKeyName = 'key' + `${checkedValue}`;
-        console.log(oldKeyName);
-
-        //こいつが遅い
-        await chrome.storage.sync.set({[oldKeyName] : text}, async(value) => {
-          console.log("登録情報" + value);
-        });
-
-        //5. 選択されたラジオの情報を取得
-        newKeyName = 'key' + `${checkValue}`;
-        await console.log('セットしたいキー' + newKeyName);
-
-
-
-        await chrome.storage.sync.get([newKeyName], (value)=> {
-          console.log("これをテキストボックスにセットしたら完了：" + value.newKeyName + "格納したキー:" + value);
-          //6. 選択したテキストをセット
-          //ここがうまく行っていない
-          document.getElementById("text").value = value.newKeyName;
-        });
-
-          //7. 選択したラジオを登録
-         await chrome.storage.sync.set({'checkedValue': checkValue });
-
-
-
-      });
-
-
-      // storage.syncの場合
-      await chrome.storage.sync.get(null, ((data) => {console.log(data)}));
 
 
     });
