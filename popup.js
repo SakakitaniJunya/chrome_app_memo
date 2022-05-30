@@ -29,11 +29,9 @@ document.addEventListener("DOMContentLoaded", function(){
       text = textElement.value
       console.log('テキストに入力された情報 : ' + text);
 
-
       //5. 選択されたラジオの情報を取得
       newKeyName = 'key' + `${checkValue}`;
       console.log('newkey' + newKeyName);
-
 
       //--以下非同期が必要な処理
       //2. 選択されていた値取得
@@ -73,7 +71,6 @@ document.addEventListener("DOMContentLoaded", function(){
         return Promise.resolve(1)
       }
 
-
       //7. storage.syncの場合
       const test = () => {
         chrome.storage.sync.get(null, ((data) => {console.log(data)}));
@@ -81,57 +78,7 @@ document.addEventListener("DOMContentLoaded", function(){
         return Promise.resolve(1)
       }
 
-      // await getOldRadioBtn();
-      // await setValue();
-      // await getOldValue();
-      // await setNewValue();
       test();
-      // const getAndSetInSync = async () => {
-      //   return new Promise( resolve => {
-      //       chrome.storage.sync.get([oldKeyName], (result) => {
-      //         chrome.storage.sync.set([])
-      //       })
-      //   })
-      // }
-      // const getOldValue_setNewValue = async () => {
-      //   // storage.getおよびsetを同期的に処理するためPromiseでラップする
-      //   return new Promise(resolve => {
-      //     chrome.storage.sync.get([newKeyName], (value) => {
-      //       console.log("これをテキストボックスにセットしたら完了：" + value[newKeyName] + "格納したキー:" + value);
-      //       //6. 選択したテキストをセット
-
-      //       document.getElementById("text").value = value[newKeyName];
-      //       chrome.storage.sync.set({'checkedValue': checkValue }, resolve);
-      //     });
-      //   })
-      // }
-
-
-      //You can use new Promise, async/await to handle this. Let's say that you want to handle chrome.storage.sync.get synchronously so that continueCode() can has the needed data.
-  //----------------------------------------------------
-  // getとsetを同期的に行う関数
-    // const getOldRadioBtn_setValue = async () => {
-    //   // storage.getおよびsetを同期的に処理するためPromiseでラップする
-    //   return new Promise(resolve => {
-    //     chrome.storage.sync.get(["checkedValue"], result => {
-    //       oldKeyName = 'key' + result.checkedValue;
-    //       console.log("oldKeyName" + oldKeyName)
-    //       chrome.storage.sync.set([oldKeyName], resolve);
-    //       // setが終わった段階でresolveする
-    //     })
-    //   })
-    // }
-    // getOldRadioBtn_setValue();
-    // getOldValue_setNewValue();
-
-
-
-  // (async () => {
-  //   // 関数を同期呼び出しする
-  //   await getOldRadioBtn_setValue();
-  //   await getOldValue_setNewValue();
-
-  // })();
 
       (async() => {
         await setLocalStorage({result1: 1, result2: 2});
@@ -144,16 +91,12 @@ document.addEventListener("DOMContentLoaded", function(){
             chrome.storage.sync.set([value] ,() => resolve)
           })
         }
+
         //2. テェックされているラジオボタンの値を取得
+
         oldKeyName = 'key' + `${checkedValue}`;
         chrome.storage.sync.set({ [oldKeyName] : oldKeyName} );
-
       });
-
-  //----------------------------------------------------
-
-
   });
-
 
 });
