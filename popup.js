@@ -34,9 +34,9 @@ document.addEventListener("DOMContentLoaded", function(){
 
     const setNewRadioBtn = (newRadioBtn) => {
 
-
+      chrome.storage.sync.set({["checkedValue"]: newRadioBtn})
     }
-j
+
     const registrateContent = (text, newRadioBtn) => {
     document.getElementById("text").value = value.newKeyName;
 
@@ -48,7 +48,7 @@ j
 
     try {
       const firstResult = await getOldRadioBtn()
-      const secondResult = await getOldRadioBtn(firstResult)
+      const secondResult = await setNewRadioBtn(firstResult)
       const thirdResult = await getOldRadioBtn(secondResult)
       const finalResult = await getOldRadioBtn(thirdResult)
       console.log(`Got the final result: ${finalResult}`);
