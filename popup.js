@@ -28,12 +28,17 @@ document.addEventListener("DOMContentLoaded", function(){
     }
 
 
+
     const getOldRadioBtn = () => {
       chrome.storage.sync.get(["checkedValue"],  (value) => {
-        console.log('checkedValue 格納してたやつ : ' + value.checkedValue);
-        oldRadioBtn = value.checkedValue;
-        oldKeyName = 'key' + `${oldRadioBtn}`;
-        console.log('順ばん1 ' );
+
+        Promise.all([
+          console.log('checkedValue 格納してたやつ : ' + value.checkedValue),
+          oldRadioBtn = value.checkedValue,
+          oldKeyName = 'key' + `${oldRadioBtn}`,
+          console.log('順ばん1 '+ `${oldKeyName}` ),
+          registContent(oldKeyName, text)
+        ])
       })
     };
 
@@ -41,52 +46,35 @@ document.addEventListener("DOMContentLoaded", function(){
       chrome.storage.sync.set({["checkedValue"]: newRadioBtn});
     };
 
-    const registContent = (oldKeyName, text) => {
-      chrome.storage.sync.set({ [oldKeyName] : text} );
-      console.log('順ばん2 ' );
-    };
+     const registContent = (oldKeyName, text) => {
+      Promise.all([
+        chrome.storage.sync.set({ [oldKeyName] : text} ),
+        console.log('textの内容は！？' + `${oldKeyName}`),
+        console.log('順ばん2 :' + `${oldKeyName}`)
+      ])
+     };
 
 
-    function getSavedContent(newKeyName) {
+    const  getSavedContent = (newKeyName) =>{
       chrome.storage.sync.get([newKeyName], (value) => {
         document.getElementById("text").value = value[newKeyName];
       });
 
     };
 
-
-
-
     const test = () => {
       chrome.storage.sync.get(null, ((data) => {console.log(data)}));
       console.log('最後');
     }
 
-    new Promise(resolve => {
-      getOldRadioBtn();
-      resolve();
-  })
-      .then(() => {
-          return new Promise(resolve => {
-            setNewRadioBtn(newRadioBtn);
-            resolve();
-          });
-      })
-      .then(() => {
-          return new Promise(resolve => {
-              registContent(oldKeyName, text);
-              resolve();
-          });
-      })
-     .then(() => {
-          return new Promise(resolve => {
-             getSavedContent(newKeyName);
-             resolve();
-          });
-      })
-        .then(() => {
-        test();
-        });
-    });
 
+
+    Promise.all([
+      getOldRadioBtn(),
+      setNewRadioBtn(newRadioBtn),
+      //registContent(oldKeyName, text),
+      getSavedContent(newKeyName)
+      //test()
+    ])
+  });
 });
