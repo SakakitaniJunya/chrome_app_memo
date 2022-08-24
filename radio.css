@@ -12,10 +12,19 @@ input[type=radio] {
     display: none;
 }
 
+@media (prefers-color-scheme: dark) {
+    body {
+      background-color: #202125;
+      color: #fff;
+    }
+
+  }
+
 textarea {
     resize: none;
     width:325px;
     height:300px;
+    border: 2px solid #202125
 }
 
 #radio1:after { /* clearfix */
