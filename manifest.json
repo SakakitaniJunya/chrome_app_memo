@@ -1,7 +1,7 @@
 {
   "name": "Colason",
   "description": "A rich memo app with Markdown and Mermaid diagram support",
-  "version": "1.2",
+  "version": "1.4",
   "manifest_version": 3,
   "permissions": ["storage"],
   "action": {

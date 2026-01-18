@@ -80,6 +80,12 @@ const translations = {
 
     // Mermaid
     mermaidDocs: "Mermaid Docs",
+
+    // Storage warnings
+    storageNearLimit: "Storage limit approaching",
+    storageOverLimit: "Storage limit exceeded!",
+    storageUsage: "Storage usage",
+    deleteOldMemos: "Consider deleting old memos to free up space.",
   },
   ja: {
     // App
@@ -158,6 +164,12 @@ const translations = {
 
     // Mermaid
     mermaidDocs: "Mermaidドキュメント",
+
+    // Storage warnings
+    storageNearLimit: "ストレージ容量が上限に近づいています",
+    storageOverLimit: "ストレージ容量が上限を超えました！",
+    storageUsage: "使用量",
+    deleteOldMemos: "古いメモを削除して容量を確保してください。",
   },
 }
 

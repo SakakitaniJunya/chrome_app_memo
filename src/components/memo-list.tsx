@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { Trash2, Edit2, Plus, Search, FileText, Clock, ExternalLink } from "lucide-react"
+import { Trash2, Edit2, Plus, Search, FileText, Clock, ExternalLink, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RichEditor } from "@/components/rich-editor"
@@ -54,12 +54,13 @@ function MemoEditor({ memo, onSave, onCancel }: MemoEditorProps) {
 interface MemoItemProps {
   memo: Memo
   isSelected: boolean
+  isOld?: boolean
   onSelect: () => void
   onEdit: () => void
   onDelete: () => void
 }
 
-function MemoItem({ memo, isSelected, onSelect, onEdit, onDelete }: MemoItemProps) {
+function MemoItem({ memo, isSelected, isOld, onSelect, onEdit, onDelete }: MemoItemProps) {
   const { lang } = useI18n()
 
   const formatDate = (timestamp: number) => {
@@ -93,7 +94,14 @@ function MemoItem({ memo, isSelected, onSelect, onEdit, onDelete }: MemoItemProp
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-sm truncate">{memo.title}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium text-sm truncate">{memo.title}</h3>
+            {isOld && (
+              <span className="text-xs px-1.5 py-0.5 bg-yellow-500/20 text-yellow-700 dark:text-yellow-500 rounded shrink-0">
+                Old
+              </span>
+            )}
+          </div>
           <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
             {getPlainText(memo.content)}
           </p>
@@ -156,12 +164,16 @@ function MermaidLink() {
 
 export function MemoList() {
   const { t } = useI18n()
-  const { memos, addMemo, updateMemo, deleteMemo, isLoading } = useMemos()
+  const { memos, addMemo, updateMemo, deleteMemo, isLoading, getStorageInfo } = useMemos()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-
+  const storageInfo = getStorageInfo()
+  const oldestMemos = [...memos]
+    .sort((a, b) => a.updatedAt - b.updatedAt)
+    .slice(0, 3)
+    .map(m => m.id)
   const selectedMemo = memos.find((m) => m.id === selectedId)
   const editingMemo = memos.find((m) => m.id === editingId)
 
@@ -239,6 +251,31 @@ export function MemoList() {
 
   return (
     <div className="flex flex-col h-full gap-4">
+      {/* Storage warning banner */}
+      {storageInfo.isNearLimit && (
+        <div className={cn(
+          "p-3 rounded-lg border flex items-start gap-2 text-sm",
+          storageInfo.isOverLimit
+            ? "bg-destructive/10 border-destructive text-destructive"
+            : "bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500"
+        )}>
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <div className="flex-1 space-y-1">
+            <p className="font-medium">
+              {storageInfo.isOverLimit
+                ? t("storageOverLimit")
+                : t("storageNearLimit")}
+            </p>
+            <p className="text-xs opacity-90">
+              {t("storageUsage")}: {storageInfo.sizeInBytes.toLocaleString()} / {storageInfo.maxSize.toLocaleString()} bytes ({Math.round(storageInfo.usagePercent)}%)
+            </p>
+            <p className="text-xs opacity-90">
+              {t("deleteOldMemos")}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -280,6 +317,7 @@ export function MemoList() {
               key={memo.id}
               memo={memo}
               isSelected={selectedId === memo.id}
+              isOld={storageInfo.isNearLimit && oldestMemos.includes(memo.id)}
               onSelect={() => setSelectedId(memo.id)}
               onEdit={() => setEditingId(memo.id)}
               onDelete={() => {

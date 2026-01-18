@@ -1,5 +1,9 @@
 import { useState, useEffect, useCallback } from "react"
 
+function calculateStorageSize(data: any): number {
+  return new Blob([JSON.stringify(data)]).size
+}
+
 export function useChromeStorage<T>(key: string, defaultValue: T) {
   const [value, setValue] = useState<T>(defaultValue)
   const [isLoading, setIsLoading] = useState(true)
@@ -80,5 +84,22 @@ export function useMemos() {
     setMemos((prev) => prev.filter((memo) => memo.id !== id))
   }, [setMemos])
 
-  return { memos, addMemo, updateMemo, deleteMemo, isLoading }
+  const getStorageInfo = useCallback(() => {
+    const sizeInBytes = calculateStorageSize(memos)
+    const maxSize = 8192 // 8KB limit for chrome.storage.sync per key
+    const usagePercent = (sizeInBytes / maxSize) * 100
+    const isNearLimit = usagePercent > 80
+    const isOverLimit = sizeInBytes > maxSize
+    
+    return {
+      sizeInBytes,
+      maxSize,
+      usagePercent: Math.min(usagePercent, 100),
+      isNearLimit,
+      isOverLimit,
+      remainingBytes: Math.max(0, maxSize - sizeInBytes)
+    }
+  }, [memos])
+
+  return { memos, addMemo, updateMemo, deleteMemo, isLoading, getStorageInfo }
 }
