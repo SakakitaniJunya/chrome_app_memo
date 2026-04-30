@@ -86,6 +86,14 @@ const translations = {
     storageOverLimit: "Storage limit exceeded!",
     storageUsage: "Storage usage",
     deleteOldMemos: "Consider deleting old memos to free up space.",
+
+    // Quick Switcher / Full-text Search
+    quickSearch: "Quick search",
+    quickSearchPlaceholder: "Search all memos...",
+    quickSearchHint: "Type to search title and body. Press Esc to close.",
+    quickSearchEmpty: "No memos to search yet.",
+    quickSearchNoResults: "No matching memos.",
+    openQuickSearch: "Open quick search",
   },
   ja: {
     // App
@@ -170,6 +178,14 @@ const translations = {
     storageOverLimit: "ストレージ容量が上限を超えました！",
     storageUsage: "使用量",
     deleteOldMemos: "古いメモを削除して容量を確保してください。",
+
+    // Quick Switcher / Full-text Search
+    quickSearch: "クイック検索",
+    quickSearchPlaceholder: "すべてのメモから検索...",
+    quickSearchHint: "タイトルと本文を検索します。Escで閉じます。",
+    quickSearchEmpty: "検索可能なメモがまだありません。",
+    quickSearchNoResults: "一致するメモがありません。",
+    openQuickSearch: "クイック検索を開く",
   },
 }
 
