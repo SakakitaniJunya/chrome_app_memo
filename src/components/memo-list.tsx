@@ -1,10 +1,12 @@
-import { useState } from "react"
-import { Trash2, Edit2, Plus, Search, FileText, Clock, ExternalLink, AlertCircle } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Trash2, Edit2, Plus, Search, FileText, Clock, ExternalLink, AlertCircle, Command } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RichEditor } from "@/components/rich-editor"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
+import { QuickSwitcher } from "@/components/quick-switcher"
 import { useMemos, type Memo } from "@/hooks/use-chrome-storage"
+import { useQuickSwitcher } from "@/hooks/use-quick-switcher"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -84,6 +86,7 @@ function MemoItem({ memo, isSelected, isOld, onSelect, onEdit, onDelete }: MemoI
 
   return (
     <div
+      data-memo-id={memo.id}
       className={cn(
         "p-3 rounded-lg cursor-pointer transition-colors border group",
         isSelected
@@ -169,6 +172,32 @@ export function MemoList() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const quickSwitcher = useQuickSwitcher()
+  const listContainerRef = useRef<HTMLDivElement | null>(null)
+  const pendingScrollRef = useRef<string | null>(null)
+
+  // When the user picks a memo from the quick switcher, leave any in-flight
+  // editor view and select the chosen memo. The list view will then scroll
+  // it into view via the effect below.
+  const handleQuickSelect = (memoId: string) => {
+    setIsCreating(false)
+    setEditingId(null)
+    setSelectedId(memoId)
+    pendingScrollRef.current = memoId
+  }
+
+  useEffect(() => {
+    const target = pendingScrollRef.current
+    if (!target) return
+    const container = listContainerRef.current
+    if (!container) return
+    const el = container.querySelector<HTMLElement>(`[data-memo-id="${target}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      pendingScrollRef.current = null
+    }
+  }, [selectedId, memos, isCreating, editingId])
+
   const storageInfo = getStorageInfo()
   const oldestMemos = [...memos]
     .sort((a, b) => a.updatedAt - b.updatedAt)
@@ -204,52 +233,68 @@ export function MemoList() {
     )
   }
 
+  const switcher = (
+    <QuickSwitcher
+      isOpen={quickSwitcher.isOpen}
+      memos={memos}
+      onClose={quickSwitcher.close}
+      onSelect={handleQuickSelect}
+    />
+  )
+
   if (isCreating) {
     return (
-      <Card className="h-full overflow-hidden flex flex-col">
-        <CardHeader className="pb-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              {t("newMemo")}
-            </CardTitle>
-            <MermaidLink />
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-auto pt-4">
-          <MemoEditor
-            onSave={handleCreate}
-            onCancel={() => setIsCreating(false)}
-          />
-        </CardContent>
-      </Card>
+      <>
+        <Card className="h-full overflow-hidden flex flex-col">
+          <CardHeader className="pb-3 shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                {t("newMemo")}
+              </CardTitle>
+              <MermaidLink />
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-auto pt-4">
+            <MemoEditor
+              onSave={handleCreate}
+              onCancel={() => setIsCreating(false)}
+            />
+          </CardContent>
+        </Card>
+        {switcher}
+      </>
     )
   }
 
   if (editingId && editingMemo) {
     return (
-      <Card className="h-full overflow-hidden flex flex-col">
-        <CardHeader className="pb-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Edit2 className="h-4 w-4" />
-              {t("editMemo")}
-            </CardTitle>
-            <MermaidLink />
-          </div>
-        </CardHeader>
-        <CardContent className="flex-1 overflow-auto pt-4">
-          <MemoEditor
-            memo={editingMemo}
-            onSave={handleUpdate}
-            onCancel={() => setEditingId(null)}
-          />
-        </CardContent>
-      </Card>
+      <>
+        <Card className="h-full overflow-hidden flex flex-col">
+          <CardHeader className="pb-3 shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Edit2 className="h-4 w-4" />
+                {t("editMemo")}
+              </CardTitle>
+              <MermaidLink />
+            </div>
+          </CardHeader>
+          <CardContent className="flex-1 overflow-auto pt-4">
+            <MemoEditor
+              memo={editingMemo}
+              onSave={handleUpdate}
+              onCancel={() => setEditingId(null)}
+            />
+          </CardContent>
+        </Card>
+        {switcher}
+      </>
     )
   }
 
   return (
+    <>
     <div className="flex flex-col h-full gap-4">
       {/* Storage warning banner */}
       {storageInfo.isNearLimit && (
@@ -287,6 +332,16 @@ export function MemoList() {
             className="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
         </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={quickSwitcher.open}
+          title={t("openQuickSearch")}
+          aria-label={t("openQuickSearch")}
+        >
+          <Command className="h-3.5 w-3.5 mr-1" />
+          <span className="text-xs">P</span>
+        </Button>
         <Button size="sm" onClick={() => setIsCreating(true)}>
           <Plus className="h-4 w-4 mr-1" />
           New
@@ -311,7 +366,7 @@ export function MemoList() {
           )}
         </div>
       ) : (
-        <div className="flex-1 overflow-auto space-y-2">
+        <div ref={listContainerRef} className="flex-1 overflow-auto space-y-2">
           {filteredMemos.map((memo) => (
             <MemoItem
               key={memo.id}
@@ -363,5 +418,7 @@ export function MemoList() {
         </Card>
       )}
     </div>
+    {switcher}
+    </>
   )
 }
