@@ -1,0 +1,48 @@
+/* Override popup-fixed sizing from src/index.css for PWA standalone window */
+html,
+body {
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Window controls overlay support: keep top draggable strip out of the way of content */
+.titlebar {
+  height: env(titlebar-area-height, 36px);
+  -webkit-app-region: drag;
+  app-region: drag;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  color: hsl(var(--muted-foreground));
+  user-select: none;
+}
+
+.titlebar .titlebar-actions {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+@media (display-mode: standalone), (display-mode: window-controls-overlay) {
+  body {
+    /* leave space for native window controls when WCO is active */
+    padding-top: env(titlebar-area-y, 0px);
+  }
+}
