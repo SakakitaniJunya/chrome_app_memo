@@ -53,6 +53,10 @@ export interface Memo {
   content: string
   createdAt: number
   updatedAt: number
+  /** Optional tags. May be merged with PR #10 once it lands. */
+  tags?: string[]
+  /** Optional category (free-form). */
+  category?: string
 }
 
 export function useMemos() {
@@ -84,6 +88,48 @@ export function useMemos() {
     setMemos((prev) => prev.filter((memo) => memo.id !== id))
   }, [setMemos])
 
+  /**
+   * Replace the full memo list. Used by import flows.
+   */
+  const replaceMemos = useCallback((next: Memo[]) => {
+    setMemos(next)
+  }, [setMemos])
+
+  /**
+   * Merge incoming memos using id (preferred) or title fallback.
+   * For collisions, the entry with the newer `updatedAt` wins.
+   * Returns counts so the caller can show a result toast.
+   */
+  const mergeMemos = useCallback((incoming: Memo[]) => {
+    let added = 0
+    let updated = 0
+    let skipped = 0
+
+    setMemos((prev) => {
+      const byId = new Map<string, Memo>()
+      prev.forEach((m) => byId.set(m.id, m))
+
+      for (const candidate of incoming) {
+        const existing = byId.get(candidate.id)
+        if (!existing) {
+          byId.set(candidate.id, candidate)
+          added++
+          continue
+        }
+        if (candidate.updatedAt > existing.updatedAt) {
+          byId.set(candidate.id, { ...existing, ...candidate })
+          updated++
+        } else {
+          skipped++
+        }
+      }
+
+      return Array.from(byId.values()).sort((a, b) => b.updatedAt - a.updatedAt)
+    })
+
+    return { added, updated, skipped }
+  }, [setMemos])
+
   const getStorageInfo = useCallback(() => {
     const sizeInBytes = calculateStorageSize(memos)
     const maxSize = 8192 // 8KB limit for chrome.storage.sync per key
@@ -101,5 +147,14 @@ export function useMemos() {
     }
   }, [memos])
 
-  return { memos, addMemo, updateMemo, deleteMemo, isLoading, getStorageInfo }
+  return {
+    memos,
+    addMemo,
+    updateMemo,
+    deleteMemo,
+    replaceMemos,
+    mergeMemos,
+    isLoading,
+    getStorageInfo,
+  }
 }
