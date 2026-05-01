@@ -1,27 +1,53 @@
-import { useState } from "react"
-import { Trash2, Edit2, Plus, Search, FileText, Clock, ExternalLink, AlertCircle } from "lucide-react"
+import { useMemo, useState } from "react"
+import {
+  Trash2,
+  Edit2,
+  Plus,
+  Search,
+  FileText,
+  Clock,
+  ExternalLink,
+  AlertCircle,
+  Hash,
+  X,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RichEditor } from "@/components/rich-editor"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
-import { useMemos, type Memo } from "@/hooks/use-chrome-storage"
+import { TagInput } from "@/components/tag-input"
+import {
+  TagSidebar,
+  UNTAGGED_KEY,
+  findActiveTagDisplay,
+} from "@/components/tag-sidebar"
+import { TagManageDialog } from "@/components/tag-manage-dialog"
+import {
+  summarizeTags,
+  tagKey,
+  useMemos,
+  type Memo,
+  type TagSummary,
+} from "@/hooks/use-chrome-storage"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 interface MemoEditorProps {
   memo?: Memo
-  onSave: (title: string, content: string) => void
+  suggestions: TagSummary[]
+  onSave: (title: string, content: string, tags: string[]) => void
   onCancel: () => void
 }
 
-function MemoEditor({ memo, onSave, onCancel }: MemoEditorProps) {
+function MemoEditor({ memo, suggestions, onSave, onCancel }: MemoEditorProps) {
   const { t } = useI18n()
   const [title, setTitle] = useState(memo?.title || "")
   const [content, setContent] = useState(memo?.content || "")
+  const [tags, setTags] = useState<string[]>(memo?.tags ?? [])
 
   const handleSave = () => {
     if (content.trim()) {
-      onSave(title, content)
+      onSave(title, content, tags)
     }
   }
 
@@ -34,6 +60,12 @@ function MemoEditor({ memo, onSave, onCancel }: MemoEditorProps) {
         onChange={(e) => setTitle(e.target.value)}
         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       />
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+          {t("tagsLabel")}
+        </label>
+        <TagInput value={tags} onChange={setTags} suggestions={suggestions} />
+      </div>
       <RichEditor
         value={content}
         onChange={setContent}
@@ -58,9 +90,18 @@ interface MemoItemProps {
   onSelect: () => void
   onEdit: () => void
   onDelete: () => void
+  onTagClick: (key: string) => void
 }
 
-function MemoItem({ memo, isSelected, isOld, onSelect, onEdit, onDelete }: MemoItemProps) {
+function MemoItem({
+  memo,
+  isSelected,
+  isOld,
+  onSelect,
+  onEdit,
+  onDelete,
+  onTagClick,
+}: MemoItemProps) {
   const { lang } = useI18n()
 
   const formatDate = (timestamp: number) => {
@@ -105,6 +146,24 @@ function MemoItem({ memo, isSelected, isOld, onSelect, onEdit, onDelete }: MemoI
           <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
             {getPlainText(memo.content)}
           </p>
+          {memo.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {memo.tags.map((tag) => (
+                <button
+                  key={tagKey(tag)}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onTagClick(tagKey(tag))
+                  }}
+                  className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium hover:bg-primary/20"
+                >
+                  <Hash className="h-2.5 w-2.5" />
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             {formatDate(memo.updatedAt)}
@@ -164,34 +223,75 @@ function MermaidLink() {
 
 export function MemoList() {
   const { t } = useI18n()
-  const { memos, addMemo, updateMemo, deleteMemo, isLoading, getStorageInfo } = useMemos()
+  const {
+    memos,
+    addMemo,
+    updateMemo,
+    deleteMemo,
+    renameTag,
+    mergeTags,
+    deleteTag,
+    isLoading,
+    getStorageInfo,
+  } = useMemos()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [activeTagKey, setActiveTagKey] = useState<string | null>(null)
+  const [manageOpen, setManageOpen] = useState(false)
   const storageInfo = getStorageInfo()
-  const oldestMemos = [...memos]
-    .sort((a, b) => a.updatedAt - b.updatedAt)
-    .slice(0, 3)
-    .map(m => m.id)
+
+  const tagSummaries = useMemo(() => summarizeTags(memos), [memos])
+  const untaggedCount = useMemo(
+    () => memos.filter((m) => m.tags.length === 0).length,
+    [memos]
+  )
+  const activeTagDisplay = useMemo(
+    () => findActiveTagDisplay(tagSummaries, activeTagKey),
+    [tagSummaries, activeTagKey]
+  )
+
+  const oldestMemos = useMemo(
+    () =>
+      [...memos]
+        .sort((a, b) => a.updatedAt - b.updatedAt)
+        .slice(0, 3)
+        .map((m) => m.id),
+    [memos]
+  )
+
+  const filteredMemos = useMemo(() => {
+    const lowerQuery = searchQuery.toLowerCase()
+    return memos.filter((memo) => {
+      // Tag filter — special-case the "Untagged" sentinel.
+      if (activeTagKey === UNTAGGED_KEY) {
+        if (memo.tags.length > 0) return false
+      } else if (activeTagKey !== null) {
+        if (!memo.tags.some((t) => tagKey(t) === activeTagKey)) return false
+      }
+      if (!lowerQuery) return true
+      // Free-text search now matches title, content, and tags.
+      if (memo.title.toLowerCase().includes(lowerQuery)) return true
+      if (memo.content.toLowerCase().includes(lowerQuery)) return true
+      if (memo.tags.some((tag) => tag.toLowerCase().includes(lowerQuery)))
+        return true
+      return false
+    })
+  }, [memos, searchQuery, activeTagKey])
+
   const selectedMemo = memos.find((m) => m.id === selectedId)
   const editingMemo = memos.find((m) => m.id === editingId)
 
-  const filteredMemos = memos.filter(
-    (memo) =>
-      memo.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      memo.content.toLowerCase().includes(searchQuery.toLowerCase())
-  )
-
-  const handleCreate = (title: string, content: string) => {
-    const newMemo = addMemo(title, content)
+  const handleCreate = (title: string, content: string, tags: string[]) => {
+    const newMemo = addMemo(title, content, tags)
     setIsCreating(false)
     setSelectedId(newMemo.id)
   }
 
-  const handleUpdate = (title: string, content: string) => {
+  const handleUpdate = (title: string, content: string, tags: string[]) => {
     if (editingId) {
-      updateMemo(editingId, { title, content })
+      updateMemo(editingId, { title, content, tags })
       setEditingId(null)
     }
   }
@@ -218,6 +318,7 @@ export function MemoList() {
         </CardHeader>
         <CardContent className="flex-1 overflow-auto pt-4">
           <MemoEditor
+            suggestions={tagSummaries}
             onSave={handleCreate}
             onCancel={() => setIsCreating(false)}
           />
@@ -241,6 +342,7 @@ export function MemoList() {
         <CardContent className="flex-1 overflow-auto pt-4">
           <MemoEditor
             memo={editingMemo}
+            suggestions={tagSummaries}
             onSave={handleUpdate}
             onCancel={() => setEditingId(null)}
           />
@@ -250,118 +352,191 @@ export function MemoList() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-4">
-      {/* Storage warning banner */}
-      {storageInfo.isNearLimit && (
-        <div className={cn(
-          "p-3 rounded-lg border flex items-start gap-2 text-sm",
-          storageInfo.isOverLimit
-            ? "bg-destructive/10 border-destructive text-destructive"
-            : "bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500"
-        )}>
-          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <div className="flex-1 space-y-1">
-            <p className="font-medium">
-              {storageInfo.isOverLimit
-                ? t("storageOverLimit")
-                : t("storageNearLimit")}
-            </p>
-            <p className="text-xs opacity-90">
-              {t("storageUsage")}: {storageInfo.sizeInBytes.toLocaleString()} / {storageInfo.maxSize.toLocaleString()} bytes ({Math.round(storageInfo.usagePercent)}%)
-            </p>
-            <p className="text-xs opacity-90">
-              {t("deleteOldMemos")}
-            </p>
-          </div>
-        </div>
-      )}
+    <div className="flex h-full gap-3">
+      <TagSidebar
+        tags={tagSummaries}
+        totalCount={memos.length}
+        untaggedCount={untaggedCount}
+        activeKey={activeTagKey}
+        onSelect={setActiveTagKey}
+        onManage={() => setManageOpen(true)}
+      />
 
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder={t("searchMemos")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          />
+      <div className="flex flex-col h-full flex-1 gap-4 min-w-0">
+        {/* Storage warning banner */}
+        {storageInfo.isNearLimit && (
+          <div
+            className={cn(
+              "p-3 rounded-lg border flex items-start gap-2 text-sm",
+              storageInfo.isOverLimit
+                ? "bg-destructive/10 border-destructive text-destructive"
+                : "bg-yellow-500/10 border-yellow-500 text-yellow-700 dark:text-yellow-500"
+            )}
+          >
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <div className="flex-1 space-y-1">
+              <p className="font-medium">
+                {storageInfo.isOverLimit
+                  ? t("storageOverLimit")
+                  : t("storageNearLimit")}
+              </p>
+              <p className="text-xs opacity-90">
+                {t("storageUsage")}: {storageInfo.sizeInBytes.toLocaleString()} /{" "}
+                {storageInfo.maxSize.toLocaleString()} bytes (
+                {Math.round(storageInfo.usagePercent)}%)
+              </p>
+              <p className="text-xs opacity-90">{t("deleteOldMemos")}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder={t("searchMemos")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            />
+          </div>
+          <Button size="sm" onClick={() => setIsCreating(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            New
+          </Button>
         </div>
-        <Button size="sm" onClick={() => setIsCreating(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          New
-        </Button>
+
+        {(activeTagKey !== null) && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{t("filteringByTag")}:</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5 font-medium">
+              <Hash className="h-3 w-3" />
+              {activeTagKey === UNTAGGED_KEY
+                ? t("untagged")
+                : activeTagDisplay ?? activeTagKey}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs"
+              onClick={() => setActiveTagKey(null)}
+            >
+              <X className="h-3 w-3 mr-1" />
+              {t("clearTagFilter")}
+            </Button>
+          </div>
+        )}
+
+        {filteredMemos.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <FileText className="h-12 w-12 mb-4 opacity-50" />
+            <p className="text-sm">
+              {searchQuery || activeTagKey !== null
+                ? t("noMemosFound")
+                : t("noMemosYet")}
+            </p>
+            {!searchQuery && activeTagKey === null && (
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => setIsCreating(true)}
+                className="mt-2"
+              >
+                {t("createFirstMemo")}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-auto space-y-2">
+            {filteredMemos.map((memo) => (
+              <MemoItem
+                key={memo.id}
+                memo={memo}
+                isSelected={selectedId === memo.id}
+                isOld={
+                  storageInfo.isNearLimit && oldestMemos.includes(memo.id)
+                }
+                onSelect={() => setSelectedId(memo.id)}
+                onEdit={() => setEditingId(memo.id)}
+                onDelete={() => {
+                  deleteMemo(memo.id)
+                  if (selectedId === memo.id) setSelectedId(null)
+                }}
+                onTagClick={(key) =>
+                  setActiveTagKey((curr) => (curr === key ? null : key))
+                }
+              />
+            ))}
+          </div>
+        )}
+
+        {selectedMemo && !editingId && (
+          <Card className="border-t mt-auto max-h-[45%] flex flex-col">
+            <CardHeader className="pb-2 pt-4 shrink-0">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-base">
+                    {selectedMemo.title}
+                  </CardTitle>
+                  {selectedMemo.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedMemo.tags.map((tag) => (
+                        <button
+                          key={tagKey(tag)}
+                          type="button"
+                          onClick={() => setActiveTagKey(tagKey(tag))}
+                          className="inline-flex items-center gap-0.5 rounded-full bg-primary/10 text-primary px-1.5 py-0.5 text-[10px] font-medium hover:bg-primary/20"
+                        >
+                          <Hash className="h-2.5 w-2.5" />
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setEditingId(selectedMemo.id)}
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:text-destructive"
+                    onClick={() => {
+                      deleteMemo(selectedMemo.id)
+                      setSelectedId(null)
+                    }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pb-4 overflow-auto flex-1">
+              <MarkdownRenderer content={selectedMemo.content} />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
-      {filteredMemos.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-          <FileText className="h-12 w-12 mb-4 opacity-50" />
-          <p className="text-sm">
-            {searchQuery ? t("noMemosFound") : t("noMemosYet")}
-          </p>
-          {!searchQuery && (
-            <Button
-              variant="link"
-              size="sm"
-              onClick={() => setIsCreating(true)}
-              className="mt-2"
-            >
-              {t("createFirstMemo")}
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="flex-1 overflow-auto space-y-2">
-          {filteredMemos.map((memo) => (
-            <MemoItem
-              key={memo.id}
-              memo={memo}
-              isSelected={selectedId === memo.id}
-              isOld={storageInfo.isNearLimit && oldestMemos.includes(memo.id)}
-              onSelect={() => setSelectedId(memo.id)}
-              onEdit={() => setEditingId(memo.id)}
-              onDelete={() => {
-                deleteMemo(memo.id)
-                if (selectedId === memo.id) setSelectedId(null)
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {selectedMemo && !editingId && (
-        <Card className="border-t mt-auto max-h-[45%] flex flex-col">
-          <CardHeader className="pb-2 pt-4 shrink-0">
-            <div className="flex items-start justify-between">
-              <CardTitle className="text-base">{selectedMemo.title}</CardTitle>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  onClick={() => setEditingId(selectedMemo.id)}
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={() => {
-                    deleteMemo(selectedMemo.id)
-                    setSelectedId(null)
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pb-4 overflow-auto flex-1">
-            <MarkdownRenderer content={selectedMemo.content} />
-          </CardContent>
-        </Card>
-      )}
+      <TagManageDialog
+        open={manageOpen}
+        tags={tagSummaries}
+        onClose={() => setManageOpen(false)}
+        onRename={renameTag}
+        onMerge={mergeTags}
+        onDelete={(tag) => {
+          deleteTag(tag)
+          // If we were filtering by the deleted tag, clear the filter.
+          if (activeTagKey === tagKey(tag)) setActiveTagKey(null)
+        }}
+      />
     </div>
   )
 }
