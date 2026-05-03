@@ -2,6 +2,7 @@ import { Settings } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { MemoList } from "@/components/memo-list"
+import { ImportExportPanel } from "@/components/import-export-panel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { I18nProvider, useI18n } from "@/lib/i18n"
 
@@ -35,6 +36,11 @@ function AppContent() {
             <div>
               <h2 className="text-lg font-semibold mb-4">{t("appearance")}</h2>
               <ThemeToggle />
+            </div>
+
+            <div className="pt-4 border-t">
+              <h2 className="text-lg font-semibold mb-4">{t("importExport")}</h2>
+              <ImportExportPanel />
             </div>
 
             <div className="pt-4 border-t">

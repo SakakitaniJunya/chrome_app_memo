@@ -86,6 +86,23 @@ const translations = {
     storageOverLimit: "Storage limit exceeded!",
     storageUsage: "Storage usage",
     deleteOldMemos: "Consider deleting old memos to free up space.",
+
+    // Import / Export
+    importExport: "Import / Export",
+    exportSection: "Export",
+    importSection: "Import",
+    exportHint: "Download all memos as JSON, or as a zip of individual Markdown files (with frontmatter).",
+    importHint: "Pick .json / .md / .markdown / .txt / .zip files. Existing memos with the same id are kept if they are newer.",
+    exportJson: "Export JSON",
+    exportMarkdownZip: "Export Markdown (zip)",
+    chooseFiles: "Choose files…",
+    exporting: "Preparing download…",
+    importing: "Importing…",
+    exportSuccessJson: "Exported {count} memos as JSON.",
+    exportSuccessZip: "Exported {count} memos as Markdown zip.",
+    importSuccess: "Imported: {added} added, {updated} updated, {skipped} skipped.",
+    importFailed: "Import failed",
+    importErrorsSuffix: "errors",
   },
   ja: {
     // App
@@ -170,6 +187,23 @@ const translations = {
     storageOverLimit: "ストレージ容量が上限を超えました！",
     storageUsage: "使用量",
     deleteOldMemos: "古いメモを削除して容量を確保してください。",
+
+    // Import / Export
+    importExport: "インポート / エクスポート",
+    exportSection: "エクスポート",
+    importSection: "インポート",
+    exportHint: "全メモを JSON、または個別 Markdown ファイル (frontmatter 付き) の zip としてダウンロードします。",
+    importHint: ".json / .md / .markdown / .txt / .zip を選択してください。同じ id のメモは新しい方が残ります。",
+    exportJson: "JSON でエクスポート",
+    exportMarkdownZip: "Markdown zip でエクスポート",
+    chooseFiles: "ファイルを選択…",
+    exporting: "ダウンロード準備中…",
+    importing: "インポート中…",
+    exportSuccessJson: "{count} 件のメモを JSON でエクスポートしました。",
+    exportSuccessZip: "{count} 件のメモを Markdown zip でエクスポートしました。",
+    importSuccess: "インポート完了: 追加 {added} / 更新 {updated} / スキップ {skipped}",
+    importFailed: "インポート失敗",
+    importErrorsSuffix: "件の警告",
   },
 }
 
