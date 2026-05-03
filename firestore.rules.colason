@@ -1,0 +1,16 @@
+// Colason (chrome_app_memo) Firestore security rules.
+//
+// This block must be merged into the yomi-note-app project's firestore.rules
+// (yomi-note repo). It is namespace-isolated from yomi-note's existing
+// collections (users / papers / terms / questions / reflections / feedbacks /
+// drafts) — Colason data lives only under `colason_users/{uid}`.
+//
+// Append the rules below inside `match /databases/{database}/documents { ... }`.
+
+match /colason_users/{uid} {
+  allow read, write: if request.auth != null && request.auth.uid == uid;
+
+  match /memos/{memoId} {
+    allow read, write: if request.auth != null && request.auth.uid == uid;
+  }
+}
