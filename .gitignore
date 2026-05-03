@@ -5,3 +5,6 @@ web-dist
 .DS_Store
 web/.env
 web/.env.local
+# Chrome 拡張のパッケージ化成果物 (秘密鍵 + crx は絶対 commit しない)
+*.pem
+*.crx
