@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Trash2, Edit2, Plus, Search, FileText, Clock, ExternalLink, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -169,6 +169,15 @@ export function MemoList() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+
+  useEffect(() => {
+    const handler = () => {
+      setEditingId(null)
+      setIsCreating(true)
+    }
+    window.addEventListener("colason:new-memo", handler)
+    return () => window.removeEventListener("colason:new-memo", handler)
+  }, [])
   const storageInfo = getStorageInfo()
   const oldestMemos = [...memos]
     .sort((a, b) => a.updatedAt - b.updatedAt)
