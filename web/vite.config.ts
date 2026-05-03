@@ -10,9 +10,16 @@ export default defineConfig({
   publicDir: resolve(root, "public"),
   plugins: [react()],
   resolve: {
-    alias: {
-      "@": resolve(repoRoot, "src"),
-    },
+    alias: [
+      {
+        find: /^@\/hooks\/use-chrome-storage$/,
+        replacement: resolve(root, "src/hooks/use-chrome-storage.ts"),
+      },
+      {
+        find: "@",
+        replacement: resolve(repoRoot, "src"),
+      },
+    ],
   },
   server: {
     port: 5174,

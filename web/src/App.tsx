@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { I18nProvider, useI18n } from "@/lib/i18n"
 import { Button } from "@/components/ui/button"
 import { useNewMemoShortcut } from "./use-new-memo-shortcut"
+import { SyncSettings } from "./components/sync-settings"
 
 function AppContent() {
   const { t } = useI18n()
@@ -82,10 +83,15 @@ function AppContent() {
             </div>
 
             <div className="pt-4 border-t">
+              <h2 className="text-lg font-semibold mb-4">{t("sync")}</h2>
+              <SyncSettings />
+            </div>
+
+            <div className="pt-4 border-t">
               <h2 className="text-lg font-semibold mb-4">{t("about")}</h2>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>Colason Web Window (PWA standalone).</p>
-                <p>Memos are stored locally in IndexedDB on this device.</p>
+                <p>Sign in with Google to sync memos across devices.</p>
               </div>
             </div>
           </div>

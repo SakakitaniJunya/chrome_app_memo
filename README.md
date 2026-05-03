@@ -53,10 +53,34 @@ For a real deployment, host `web-dist/` on any HTTPS static origin (Cloudflare P
 | `Cmd/Ctrl + I` | Italic |
 | `Cmd/Ctrl + K` | Link |
 
+## Cloud sync (PWA only)
+
+The PWA build supports optional Google Sign-in + Firestore sync. Memos stay device-local until you sign in; after sign-in they sync to Firestore under `colason_users/{uid}/memos/{memoId}`. Existing local memos are migrated once on first sign-in.
+
+The Chrome extension build is unaffected — it continues to use `chrome.storage.sync` only.
+
+### Setup
+
+1. Firebase Console → `yomi-note-app` project → **Project settings → Your apps → Add app → Web** → register an app named `colason`. Copy the config.
+2. `cp web/.env.example web/.env` and fill in `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, etc.
+3. Firebase Console → **Authentication → Sign-in method** → enable **Google**. Add `localhost` and your prod domain to the authorized domains.
+4. Append the contents of `firestore.rules.colason` to the project's existing Firestore rules (yomi-note repo's `firestore.rules`) and re-deploy them. The block is additive and namespaced under `colason_users/`, so it does not affect yomi-note's existing collections.
+5. Rebuild the PWA: `npm run build:web`.
+
+If `VITE_FIREBASE_*` is not configured, the app silently runs in local-only mode (current behavior).
+
+### Tenancy / data isolation
+
+Colason data is fully namespaced — it never collides with yomi-note's own collections (`users`, `papers`, `terms`, `questions`, `reflections`, `feedbacks`, `drafts`). All reads/writes are gated by `request.auth.uid == uid` so other Google users cannot see your memos.
+
 ### Architecture notes
 
 - `src/` — shared UI (memo list, rich editor, markdown renderer, theme, i18n).
-- `src/hooks/use-chrome-storage.ts` — runtime-detects `chrome.storage.sync`; falls back to IndexedDB for the PWA build, then to `localStorage`.
+- `src/hooks/use-chrome-storage.ts` — Chrome extension build: `chrome.storage.sync` only.
+- `web/src/hooks/use-chrome-storage.ts` — PWA build override (selected via Vite alias): IndexedDB locally; Firestore + Google Sign-in when configured and signed-in.
+- `web/src/lib/firebase.ts` — lazy Firebase init (auth + Firestore with persistent local cache). Returns `null` when env is unset.
+- `web/src/lib/firestore-memos.ts` — CRUD + `onSnapshot` subscription against `colason_users/{uid}/memos`.
+- `web/src/lib/migration.ts` — one-time IndexedDB → Firestore migration on first sign-in (idempotent via `migrationCompletedAt` flag).
 - `src/lib/idb-store.ts` — minimal hand-written IndexedDB key-value store (no extra dep).
 - `web/index.html`, `web/src/App.tsx`, `web/src/main.tsx` — PWA entry, app shell with `display_override: window-controls-overlay`.
 - `web/public/manifest.webmanifest` — PWA manifest (standalone, WCO, icons, app shortcut).
