@@ -90,11 +90,11 @@ const translations = {
     storageUsage: "Storage usage",
     deleteOldMemos: "Consider deleting old memos to free up space.",
 
-    // Sync (PWA only)
+    // Sync
     sync: "Sync",
     syncDisabled: "Cloud sync is not configured",
     syncDisabledHint:
-      "Set VITE_FIREBASE_* in web/.env to enable Google sign-in.",
+      "Set VITE_FIREBASE_* in .env (root) and configure manifest.json oauth2.client_id to enable Google sign-in.",
     syncSignedOut: "Local-only mode",
     syncSignedIn: "Synced to cloud",
     signInWithGoogle: "Sign in with Google",
@@ -187,11 +187,11 @@ const translations = {
     storageUsage: "使用量",
     deleteOldMemos: "古いメモを削除して容量を確保してください。",
 
-    // Sync (PWA only)
+    // Sync
     sync: "同期",
     syncDisabled: "クラウド同期は未設定です",
     syncDisabledHint:
-      "web/.env に VITE_FIREBASE_* を設定すると Google ログインが有効になります。",
+      ".env (root) に VITE_FIREBASE_* と manifest.json の oauth2.client_id を設定すると Google ログインが有効になります。",
     syncSignedOut: "ローカルのみで動作中",
     syncSignedIn: "クラウドに同期中",
     signInWithGoogle: "Google でログイン",
