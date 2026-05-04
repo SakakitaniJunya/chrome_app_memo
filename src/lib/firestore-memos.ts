@@ -1,70 +1,118 @@
+// Firestore REST client for the Chrome extension.
+//
+// We hit the public Firestore REST API directly with the chrome.identity
+// access token — no Firebase JS SDK. The Firestore REST surface does NOT
+// support realtime listeners, so cross-device updates are reflected via
+// polling + visibility-change refresh in the consumer hook.
+
 import {
-  collection,
-  doc,
-  setDoc,
-  deleteDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-  type DocumentData,
-} from "firebase/firestore"
-import { getFirebaseDb } from "./firebase"
-import type { Memo } from "@/hooks/use-chrome-storage"
+  getValidAccessToken,
+  type GcpUser,
+} from "./gcp-auth"
 
-const ROOT = "colason_users"
-const SUB = "memos"
+const PROJECT_ID = "yomi-note-app"
+const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`
 
-function memosCol(uid: string) {
-  const db = getFirebaseDb()
-  if (!db) return null
-  return collection(db, ROOT, uid, SUB)
+export interface Memo {
+  id: string
+  title: string
+  content: string
+  createdAt: number
+  updatedAt: number
 }
 
-function memoDoc(uid: string, id: string) {
-  const db = getFirebaseDb()
-  if (!db) return null
-  return doc(db, ROOT, uid, SUB, id)
+interface FirestoreValue {
+  stringValue?: string
+  integerValue?: string
+  doubleValue?: number
+  booleanValue?: boolean
+  timestampValue?: string
+  nullValue?: null
 }
 
-function toMillis(value: unknown, fallback: number): number {
-  if (value instanceof Timestamp) return value.toMillis()
-  if (typeof value === "number") return value
+interface FirestoreDocument {
+  name: string
+  fields?: Record<string, FirestoreValue>
+  createTime?: string
+  updateTime?: string
+}
+
+interface ListDocumentsResponse {
+  documents?: FirestoreDocument[]
+  nextPageToken?: string
+}
+
+function toIso(ms: number): string {
+  return new Date(ms).toISOString()
+}
+
+function fromTimestamp(value: FirestoreValue | undefined, fallback: number): number {
+  if (!value) return fallback
+  if (typeof value.timestampValue === "string") {
+    const parsed = Date.parse(value.timestampValue)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+  if (typeof value.integerValue === "string") {
+    const parsed = Number.parseInt(value.integerValue, 10)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
   return fallback
 }
 
-function fromDoc(data: DocumentData, id: string): Memo {
+function fromString(value: FirestoreValue | undefined): string {
+  return typeof value?.stringValue === "string" ? value.stringValue : ""
+}
+
+function memoFromDoc(doc: FirestoreDocument): Memo {
+  // doc.name = "projects/xxx/databases/(default)/documents/colason_users/{uid}/memos/{memoId}"
+  const idFromName = doc.name.split("/").pop() ?? ""
+  const fields = doc.fields ?? {}
   const fallback = Date.now()
   return {
-    id,
-    title: typeof data.title === "string" ? data.title : "",
-    content: typeof data.content === "string" ? data.content : "",
-    createdAt: toMillis(data.createdAt, fallback),
-    updatedAt: toMillis(data.updatedAt, fallback),
+    id: idFromName,
+    title: fromString(fields["title"]),
+    content: fromString(fields["content"]),
+    createdAt: fromTimestamp(fields["createdAt"], fallback),
+    updatedAt: fromTimestamp(fields["updatedAt"], fallback),
   }
 }
 
-export function subscribeMemos(
-  uid: string,
-  cb: (memos: Memo[]) => void,
-): () => void {
-  const col = memosCol(uid)
-  if (!col) {
-    cb([])
-    return () => {}
+function memoToFields(
+  memo: Pick<Memo, "title" | "content" | "createdAt" | "updatedAt">,
+): Record<string, FirestoreValue> {
+  return {
+    title: { stringValue: memo.title },
+    content: { stringValue: memo.content },
+    createdAt: { timestampValue: toIso(memo.createdAt) },
+    updatedAt: { timestampValue: toIso(memo.updatedAt) },
   }
-  const q = query(col, orderBy("updatedAt", "desc"))
-  return onSnapshot(
-    q,
-    (snap) => {
-      const memos = snap.docs.map((d) => fromDoc(d.data(), d.id))
-      cb(memos)
-    },
-    (err) => {
-      console.error("[colason] memo subscription error", err)
-    },
+}
+
+async function authedFetch(
+  path: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  const token = await getValidAccessToken()
+  if (!token) throw new Error("not_authenticated")
+  const headers = new Headers(init.headers)
+  headers.set("Authorization", `Bearer ${token}`)
+  if (init.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json")
+  }
+  return fetch(`${BASE}${path}`, { ...init, headers })
+}
+
+export async function listMemos(uid: string): Promise<Memo[]> {
+  const res = await authedFetch(
+    `/colason_users/${encodeURIComponent(uid)}/memos?pageSize=300`,
   )
+  if (res.status === 404) return []
+  if (!res.ok) {
+    throw new Error(`firestore listMemos failed: ${res.status} ${await res.text()}`)
+  }
+  const json = (await res.json()) as ListDocumentsResponse
+  const docs = json.documents ?? []
+  return docs.map(memoFromDoc).sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
 export async function upsertMemo(
@@ -73,18 +121,22 @@ export async function upsertMemo(
     updatedAt?: number
   },
 ): Promise<void> {
-  const ref = memoDoc(uid, memo.id)
-  if (!ref) return
-  await setDoc(
-    ref,
-    {
+  const updatedAt = memo.updatedAt ?? Date.now()
+  const body = JSON.stringify({
+    fields: memoToFields({
       title: memo.title,
       content: memo.content,
-      createdAt: Timestamp.fromMillis(memo.createdAt),
-      updatedAt: serverTimestamp(),
-    },
-    { merge: true },
+      createdAt: memo.createdAt,
+      updatedAt,
+    }),
+  })
+  const res = await authedFetch(
+    `/colason_users/${encodeURIComponent(uid)}/memos/${encodeURIComponent(memo.id)}`,
+    { method: "PATCH", body },
   )
+  if (!res.ok) {
+    throw new Error(`firestore upsertMemo failed: ${res.status} ${await res.text()}`)
+  }
 }
 
 export async function patchMemo(
@@ -92,20 +144,87 @@ export async function patchMemo(
   id: string,
   updates: Partial<Pick<Memo, "title" | "content">>,
 ): Promise<void> {
-  const ref = memoDoc(uid, id)
-  if (!ref) return
-  await setDoc(
-    ref,
+  const fields: Record<string, FirestoreValue> = {}
+  if (typeof updates.title === "string") fields["title"] = { stringValue: updates.title }
+  if (typeof updates.content === "string") fields["content"] = { stringValue: updates.content }
+  fields["updatedAt"] = { timestampValue: toIso(Date.now()) }
+
+  // Build updateMask query so unspecified fields keep their value.
+  const updateMask = Object.keys(fields)
+    .map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`)
+    .join("&")
+
+  const res = await authedFetch(
+    `/colason_users/${encodeURIComponent(uid)}/memos/${encodeURIComponent(id)}?${updateMask}`,
     {
-      ...updates,
-      updatedAt: serverTimestamp(),
+      method: "PATCH",
+      body: JSON.stringify({ fields }),
     },
-    { merge: true },
   )
+  if (!res.ok) {
+    throw new Error(`firestore patchMemo failed: ${res.status} ${await res.text()}`)
+  }
 }
 
 export async function removeMemo(uid: string, id: string): Promise<void> {
-  const ref = memoDoc(uid, id)
-  if (!ref) return
-  await deleteDoc(ref)
+  const res = await authedFetch(
+    `/colason_users/${encodeURIComponent(uid)}/memos/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  )
+  if (!res.ok && res.status !== 404) {
+    throw new Error(`firestore removeMemo failed: ${res.status} ${await res.text()}`)
+  }
 }
+
+// Migration completion sentinel doc (top of colason_users/{uid}).
+export interface MigrationStatus {
+  completed: boolean
+  count: number
+  completedAt?: number
+}
+
+export async function readMigrationStatus(uid: string): Promise<MigrationStatus> {
+  const res = await authedFetch(`/colason_users/${encodeURIComponent(uid)}`)
+  if (res.status === 404) return { completed: false, count: 0 }
+  if (!res.ok) {
+    throw new Error(`firestore readMigrationStatus failed: ${res.status}`)
+  }
+  const json = (await res.json()) as FirestoreDocument
+  const fields = json.fields ?? {}
+  const completed =
+    fields["migrationCompletedAt"] !== undefined &&
+    typeof fields["migrationCompletedAt"].timestampValue === "string"
+  const count = fromTimestamp(fields["migratedCount"], 0)
+  return {
+    completed,
+    count,
+    completedAt: completed
+      ? fromTimestamp(fields["migrationCompletedAt"], Date.now())
+      : undefined,
+  }
+}
+
+export async function writeMigrationStatus(
+  uid: string,
+  count: number,
+): Promise<void> {
+  const body = JSON.stringify({
+    fields: {
+      migrationCompletedAt: { timestampValue: toIso(Date.now()) },
+      migratedCount: { integerValue: count.toString() },
+      migrationSource: { stringValue: "chrome-extension" },
+    },
+  })
+  const res = await authedFetch(
+    `/colason_users/${encodeURIComponent(uid)}?` +
+      "updateMask.fieldPaths=migrationCompletedAt&" +
+      "updateMask.fieldPaths=migratedCount&" +
+      "updateMask.fieldPaths=migrationSource",
+    { method: "PATCH", body },
+  )
+  if (!res.ok) {
+    throw new Error(`firestore writeMigrationStatus failed: ${res.status}`)
+  }
+}
+
+export type { GcpUser }

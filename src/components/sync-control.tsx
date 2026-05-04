@@ -2,10 +2,7 @@ import { useState } from "react"
 import { CloudOff, Cloud, LogIn, LogOut, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/use-auth"
-import {
-  signInWithChromeIdentity,
-  signOutUser,
-} from "@/lib/firebase"
+import { signInInteractive, signOut } from "@/lib/gcp-auth"
 import { useI18n } from "@/lib/i18n"
 
 export function SyncControl() {
@@ -16,7 +13,7 @@ export function SyncControl() {
   const handleSignIn = async () => {
     setBusy(true)
     try {
-      await signInWithChromeIdentity()
+      await signInInteractive()
     } catch (err) {
       console.error("[colason] sign-in failed", err)
     } finally {
@@ -27,7 +24,7 @@ export function SyncControl() {
   const handleSignOut = async () => {
     setBusy(true)
     try {
-      await signOutUser()
+      await signOut()
     } catch (err) {
       console.error("[colason] sign-out failed", err)
     } finally {
@@ -72,7 +69,7 @@ export function SyncControl() {
       {user ? (
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs text-muted-foreground truncate flex-1">
-            {t("syncSignedIn")} — {user.email ?? user.uid}
+            {t("syncSignedIn")} — {user.email ?? user.sub}
           </div>
           <Button
             size="sm"

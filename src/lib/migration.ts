@@ -1,15 +1,12 @@
-// One-time migration: extension's chrome.storage.sync `memos` array
-// → Firestore `colason_users/{uid}/memos/{memoId}`.
-//
-// Runs automatically when the user first signs in. Marks completion in
-// `colason_users/{uid}` so it never re-runs (even across devices).
+// One-time migration: chrome.storage.sync `memos` array → Firestore.
+// Sentinel `colason_users/{uid}/migrationCompletedAt` prevents re-run.
 
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
-import { getFirebaseDb } from "./firebase"
-import { upsertMemo } from "./firestore-memos"
-import type { Memo } from "@/hooks/use-chrome-storage"
-
-const ROOT = "colason_users"
+import {
+  readMigrationStatus,
+  upsertMemo,
+  writeMigrationStatus,
+  type Memo,
+} from "./firestore-memos"
 
 let inFlight: Promise<void> | null = null
 
@@ -33,26 +30,13 @@ function readChromeMemos(): Promise<Memo[]> {
 export function runMigrationOnce(uid: string): Promise<void> {
   if (inFlight) return inFlight
   inFlight = (async () => {
-    const db = getFirebaseDb()
-    if (!db) return
-    const userRef = doc(db, ROOT, uid)
-    const snap = await getDoc(userRef)
-    if (snap.exists() && snap.data()?.migrationCompletedAt) {
-      return
-    }
+    const status = await readMigrationStatus(uid)
+    if (status.completed) return
     const localMemos = await readChromeMemos()
     for (const memo of localMemos) {
       await upsertMemo(uid, memo)
     }
-    await setDoc(
-      userRef,
-      {
-        migrationCompletedAt: serverTimestamp(),
-        migratedCount: localMemos.length,
-        migrationSource: "chrome-extension",
-      },
-      { merge: true },
-    )
+    await writeMigrationStatus(uid, localMemos.length)
   })().catch((err) => {
     console.error("[colason] migration failed", err)
     inFlight = null

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { idbGet, idbSet, isIdbAvailable } from "@/lib/idb-store"
 import {
-  subscribeMemos,
+  listMemos,
   upsertMemo,
   patchMemo,
   removeMemo,
@@ -173,6 +173,8 @@ function saveLocalMemos(memos: Memo[]): void {
   }
 }
 
+const CLOUD_POLL_INTERVAL_MS = 30_000
+
 export function useMemos() {
   const { user, isReady } = useAuth()
   const [localMemos, setLocalMemos] = useState<Memo[]>([])
@@ -193,7 +195,7 @@ export function useMemos() {
     }
   }, [])
 
-  // Sign-in → run migration + subscribe to Firestore.
+  // Sign-in → migrate (once) → poll Firestore.
   useEffect(() => {
     if (!user) {
       setCloudMemos(null)
@@ -201,13 +203,45 @@ export function useMemos() {
       return
     }
     if (!isLocalLoaded) return
-    void runMigrationOnce(user.uid)
-    const unsub = subscribeMemos(user.uid, (memos) => {
-      setCloudMemos(memos)
-      setIsCloudLoaded(true)
-    })
+
+    let cancelled = false
+
+    const refresh = async () => {
+      try {
+        const memos = await listMemos(user.sub)
+        if (cancelled) return
+        setCloudMemos(memos)
+        setIsCloudLoaded(true)
+      } catch (err) {
+        console.error("[colason] listMemos failed", err)
+        if (!cancelled) setIsCloudLoaded(true)
+      }
+    }
+
+    const start = async () => {
+      await runMigrationOnce(user.sub)
+      if (cancelled) return
+      await refresh()
+    }
+    void start()
+
+    const interval = window.setInterval(() => {
+      void refresh()
+    }, CLOUD_POLL_INTERVAL_MS)
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refresh()
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    window.addEventListener("focus", refresh)
+
     return () => {
-      unsub()
+      cancelled = true
+      window.clearInterval(interval)
+      document.removeEventListener("visibilitychange", onVisibility)
+      window.removeEventListener("focus", refresh)
     }
   }, [user, isLocalLoaded])
 
@@ -225,7 +259,10 @@ export function useMemos() {
         updatedAt: Date.now(),
       }
       if (user) {
-        void upsertMemo(user.uid, newMemo)
+        setCloudMemos((prev) => (prev ? [newMemo, ...prev] : [newMemo]))
+        void upsertMemo(user.sub, newMemo).catch((err) =>
+          console.error("[colason] upsertMemo failed", err),
+        )
       } else {
         setLocalMemos((prev) => {
           const next = [newMemo, ...prev]
@@ -241,7 +278,18 @@ export function useMemos() {
   const updateMemo = useCallback(
     (id: string, updates: Partial<Pick<Memo, "title" | "content">>) => {
       if (user) {
-        void patchMemo(user.uid, id, updates)
+        setCloudMemos((prev) =>
+          prev
+            ? prev.map((memo) =>
+                memo.id === id
+                  ? { ...memo, ...updates, updatedAt: Date.now() }
+                  : memo,
+              )
+            : prev,
+        )
+        void patchMemo(user.sub, id, updates).catch((err) =>
+          console.error("[colason] patchMemo failed", err),
+        )
       } else {
         setLocalMemos((prev) => {
           const next = prev.map((memo) =>
@@ -260,7 +308,10 @@ export function useMemos() {
   const deleteMemo = useCallback(
     (id: string) => {
       if (user) {
-        void removeMemo(user.uid, id)
+        setCloudMemos((prev) => (prev ? prev.filter((m) => m.id !== id) : prev))
+        void removeMemo(user.sub, id).catch((err) =>
+          console.error("[colason] removeMemo failed", err),
+        )
       } else {
         setLocalMemos((prev) => {
           const next = prev.filter((memo) => memo.id !== id)

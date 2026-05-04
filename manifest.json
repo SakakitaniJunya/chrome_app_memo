@@ -5,10 +5,8 @@
   "manifest_version": 3,
   "permissions": ["storage", "identity"],
   "host_permissions": [
-    "https://*.googleapis.com/*",
-    "https://*.firebaseio.com/*",
-    "https://securetoken.googleapis.com/*",
-    "https://identitytoolkit.googleapis.com/*"
+    "https://firestore.googleapis.com/*",
+    "https://www.googleapis.com/*"
   ],
   "background": {
     "service_worker": "assets/background.js",
@@ -34,7 +32,8 @@
     "scopes": [
       "openid",
       "email",
-      "profile"
+      "profile",
+      "https://www.googleapis.com/auth/datastore"
     ]
   },
   "options_page": "options.html"
