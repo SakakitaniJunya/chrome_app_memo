@@ -1,4 +1,4 @@
-import { Moon, Sun, Monitor, Palette, MoveHorizontal } from "lucide-react"
+import { Moon, Sun, Monitor, Palette, MoveHorizontal, MoveVertical } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme, type Theme, type AccentColor, type SizeOption } from "@/components/theme-provider"
 import {
@@ -11,7 +11,7 @@ import {
 import { useI18n } from "@/lib/i18n"
 
 export function ThemeToggle() {
-  const { theme, setTheme, accent, setAccent, width, setWidth } = useTheme()
+  const { theme, setTheme, accent, setAccent, width, setWidth, height, setHeight } = useTheme()
   const { t } = useI18n()
 
   const themes: { value: Theme; labelKey: "light" | "dark" | "system"; icon: React.ReactNode }[] = [
@@ -33,6 +33,12 @@ export function ThemeToggle() {
     { value: "small", label: "S", size: "450px" },
     { value: "medium", label: "M", size: "600px" },
     { value: "large", label: "L", size: "800px" },
+  ]
+
+  const heightOptions: { value: SizeOption; label: string; size: string }[] = [
+    { value: "small", label: "S", size: "600px" },
+    { value: "medium", label: "M", size: "760px" },
+    { value: "large", label: "L", size: "960px" },
   ]
 
   return (
@@ -83,7 +89,7 @@ export function ThemeToggle() {
       <div className="space-y-2">
         <label className="text-sm font-medium flex items-center gap-2">
           <MoveHorizontal className="h-4 w-4" />
-          {t("popupWidth")}
+          {t("windowWidth")}
         </label>
         <div className="flex gap-1">
           {widthOptions.map((opt) => (
@@ -99,8 +105,29 @@ export function ThemeToggle() {
             </Button>
           ))}
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium flex items-center gap-2">
+          <MoveVertical className="h-4 w-4" />
+          {t("windowHeight")}
+        </label>
+        <div className="flex gap-1">
+          {heightOptions.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={height === opt.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHeight(opt.value)}
+              className="flex-1 flex flex-col items-center gap-0 h-auto py-1.5"
+            >
+              <span className="font-medium text-xs">{opt.label}</span>
+              <span className="text-[10px] opacity-70">{opt.size}</span>
+            </Button>
+          ))}
+        </div>
         <p className="text-xs text-muted-foreground">
-          {t("reopenToApply")}
+          {t("dragToResize")}
         </p>
       </div>
     </div>

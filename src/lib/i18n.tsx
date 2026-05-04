@@ -54,6 +54,9 @@ const translations = {
     accentColor: "Accent Color",
     popupWidth: "Popup Width",
     reopenToApply: "Reopen the popup to apply width changes",
+    windowWidth: "Window Width",
+    windowHeight: "Window Height",
+    dragToResize: "You can also drag the window edges to resize freely.",
 
     // Colors
     default: "Default",
@@ -148,6 +151,9 @@ const translations = {
     accentColor: "アクセントカラー",
     popupWidth: "ポップアップの横幅",
     reopenToApply: "横幅変更はポップアップを開き直すと適用されます",
+    windowWidth: "ウィンドウ幅",
+    windowHeight: "ウィンドウ高さ",
+    dragToResize: "ウィンドウの端をドラッグして自由にサイズ変更もできます。",
 
     // Colors
     default: "デフォルト",

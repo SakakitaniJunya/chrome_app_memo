@@ -84,3 +84,54 @@ chrome.windows.onBoundsChanged?.addListener(async (window) => {
     height: window.height,
   })
 })
+
+interface ResizeMessage {
+  type: "resize"
+  width?: number
+  height?: number
+}
+
+interface ResizeResponse {
+  ok: boolean
+  reason?: string
+}
+
+function isResizeMessage(value: unknown): value is ResizeMessage {
+  if (typeof value !== "object" || value === null) return false
+  const candidate = value as Record<string, unknown>
+  return candidate.type === "resize"
+}
+
+async function applyResize(width?: number, height?: number): Promise<ResizeResponse> {
+  const state = await readState()
+
+  if (state.windowId === null) {
+    await writeState({
+      ...state,
+      ...(width !== undefined ? { width } : {}),
+      ...(height !== undefined ? { height } : {}),
+    })
+    return { ok: true, reason: "persisted-only" }
+  }
+
+  try {
+    await chrome.windows.update(state.windowId, {
+      ...(width !== undefined ? { width } : {}),
+      ...(height !== undefined ? { height } : {}),
+    })
+    await writeState({
+      ...state,
+      ...(width !== undefined ? { width } : {}),
+      ...(height !== undefined ? { height } : {}),
+    })
+    return { ok: true }
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : "unknown" }
+  }
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (!isResizeMessage(message)) return false
+  void applyResize(message.width, message.height).then(sendResponse)
+  return true
+})
