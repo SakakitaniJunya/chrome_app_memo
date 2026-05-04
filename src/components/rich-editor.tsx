@@ -22,9 +22,16 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
-import { useI18n } from "@/lib/i18n"
+import { useI18n, type Language } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { mermaidTemplates, type MermaidTemplate } from "@/lib/mermaid-templates"
 
 type EditorMode = "split-horizontal" | "split-vertical" | "edit" | "preview"
 
@@ -186,18 +193,75 @@ const toolbarButtons: ToolbarButton[] = [
         "\n| Header | Header |\n| ------ | ------ |\n| Cell   | Cell   |\n"
       ),
   },
-  {
-    icon: <GitBranch className="h-4 w-4" />,
-    labelKey: "mermaidDiagram",
-    action: (ref, value, onChange) =>
-      insertText(
-        ref,
-        value,
-        onChange,
-        "\n```mermaid\ngraph TD\n    A[Start] --> B[End]\n```\n"
-      ),
-  },
 ]
+
+interface MermaidMenuProps {
+  textareaRef: React.RefObject<HTMLTextAreaElement>
+  value: string
+  onChange: (value: string) => void
+  disabled: boolean
+  lang: Language
+  triggerLabel: string
+}
+
+function templateLabel(template: MermaidTemplate, lang: Language): string {
+  return lang === "ja" ? template.labelJa : template.labelEn
+}
+
+function MermaidMenu({
+  textareaRef,
+  value,
+  onChange,
+  disabled,
+  lang,
+  triggerLabel,
+}: MermaidMenuProps) {
+  // Hide the menu in preview mode so the editor's "no editing" semantics hold.
+  if (disabled) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="inline-flex items-center gap-1 px-2 h-7 rounded-md text-xs opacity-50"
+        title={triggerLabel}
+        aria-label={triggerLabel}
+      >
+        <GitBranch className="h-4 w-4" />
+        <span>Mermaid</span>
+      </button>
+    )
+  }
+
+  // value="" trick: same template can be re-picked since selecting it sets
+  // value back to "" inside onValueChange (the option's `value` is its key).
+  return (
+    <Select
+      value=""
+      onValueChange={(key) => {
+        const template = mermaidTemplates.find((t) => t.key === key)
+        if (template) {
+          insertText(textareaRef, value, onChange, template.skeleton)
+        }
+      }}
+    >
+      <SelectTrigger
+        className="h-7 w-auto px-2 gap-1 border-0 bg-transparent shadow-none hover:bg-accent hover:text-accent-foreground focus:ring-0 focus:ring-offset-0 [&>svg]:hidden"
+        title={triggerLabel}
+        aria-label={triggerLabel}
+      >
+        <GitBranch className="h-4 w-4" />
+        <span className="text-xs">Mermaid</span>
+      </SelectTrigger>
+      <SelectContent className="max-h-80">
+        {mermaidTemplates.map((template) => (
+          <SelectItem key={template.key} value={template.key}>
+            {templateLabel(template, lang)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
 
 interface ModeButton {
   mode: EditorMode
@@ -218,7 +282,7 @@ export function RichEditor({
   placeholder,
   className,
 }: RichEditorProps) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [mode, setMode] = useState<EditorMode>("split-horizontal")
 
@@ -330,6 +394,14 @@ export function RichEditor({
               {button.icon}
             </Button>
           ))}
+          <MermaidMenu
+            textareaRef={textareaRef}
+            value={value}
+            onChange={onChange}
+            disabled={mode === "preview"}
+            lang={lang}
+            triggerLabel={t("mermaidDiagram")}
+          />
         </div>
 
         {/* Mode switcher */}
