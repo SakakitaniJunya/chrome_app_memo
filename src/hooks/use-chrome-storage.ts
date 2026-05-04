@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { idbGet, idbSet, isIdbAvailable } from "@/lib/idb-store"
+import {
+  subscribeMemos,
+  upsertMemo,
+  patchMemo,
+  removeMemo,
+} from "@/lib/firestore-memos"
+import { runMigrationOnce } from "@/lib/migration"
+import { useAuth } from "./use-auth"
 
-function calculateStorageSize(data: any): number {
+function calculateStorageSize(data: unknown): number {
   return new Blob([JSON.stringify(data)]).size
 }
 
@@ -112,8 +120,100 @@ export interface Memo {
   updatedAt: number
 }
 
+function loadLocalMemos(): Promise<Memo[]> {
+  return new Promise((resolve) => {
+    if (hasChromeStorage()) {
+      chrome.storage.sync.get(["memos"], (result) => {
+        const value = result["memos"]
+        resolve(Array.isArray(value) ? (value as Memo[]) : [])
+      })
+      return
+    }
+    if (isIdbAvailable()) {
+      idbGet<Memo[]>("memos")
+        .then((stored) => resolve(Array.isArray(stored) ? stored : []))
+        .catch(() => {
+          const ls = localStorage.getItem("memos")
+          try {
+            resolve(ls ? (JSON.parse(ls) as Memo[]) : [])
+          } catch {
+            resolve([])
+          }
+        })
+      return
+    }
+    const ls = localStorage.getItem("memos")
+    try {
+      resolve(ls ? (JSON.parse(ls) as Memo[]) : [])
+    } catch {
+      resolve([])
+    }
+  })
+}
+
+function saveLocalMemos(memos: Memo[]): void {
+  if (hasChromeStorage()) {
+    chrome.storage.sync.set({ memos })
+    return
+  }
+  if (isIdbAvailable()) {
+    void idbSet("memos", memos).catch(() => {
+      try {
+        localStorage.setItem("memos", JSON.stringify(memos))
+      } catch {
+        // best effort
+      }
+    })
+    return
+  }
+  try {
+    localStorage.setItem("memos", JSON.stringify(memos))
+  } catch {
+    // best effort
+  }
+}
+
 export function useMemos() {
-  const [memos, setMemos, isLoading] = useChromeStorage<Memo[]>("memos", [])
+  const { user, isReady } = useAuth()
+  const [localMemos, setLocalMemos] = useState<Memo[]>([])
+  const [cloudMemos, setCloudMemos] = useState<Memo[] | null>(null)
+  const [isLocalLoaded, setIsLocalLoaded] = useState(false)
+  const [isCloudLoaded, setIsCloudLoaded] = useState(false)
+
+  // Load local memos once on mount.
+  useEffect(() => {
+    let cancelled = false
+    void loadLocalMemos().then((stored) => {
+      if (cancelled) return
+      setLocalMemos(stored)
+      setIsLocalLoaded(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Sign-in → run migration + subscribe to Firestore.
+  useEffect(() => {
+    if (!user) {
+      setCloudMemos(null)
+      setIsCloudLoaded(false)
+      return
+    }
+    if (!isLocalLoaded) return
+    void runMigrationOnce(user.uid)
+    const unsub = subscribeMemos(user.uid, (memos) => {
+      setCloudMemos(memos)
+      setIsCloudLoaded(true)
+    })
+    return () => {
+      unsub()
+    }
+  }, [user, isLocalLoaded])
+
+  const isCloud = user !== null && cloudMemos !== null
+  const memos = isCloud ? (cloudMemos as Memo[]) : localMemos
+  const isLoading = !isReady || (user ? !isCloudLoaded : !isLocalLoaded)
 
   const addMemo = useCallback(
     (title: string, content: string) => {
@@ -124,36 +224,59 @@ export function useMemos() {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       }
-      setMemos((prev) => [newMemo, ...prev])
+      if (user) {
+        void upsertMemo(user.uid, newMemo)
+      } else {
+        setLocalMemos((prev) => {
+          const next = [newMemo, ...prev]
+          saveLocalMemos(next)
+          return next
+        })
+      }
       return newMemo
     },
-    [setMemos]
+    [user],
   )
 
   const updateMemo = useCallback(
     (id: string, updates: Partial<Pick<Memo, "title" | "content">>) => {
-      setMemos((prev) =>
-        prev.map((memo) =>
-          memo.id === id
-            ? { ...memo, ...updates, updatedAt: Date.now() }
-            : memo
-        )
-      )
+      if (user) {
+        void patchMemo(user.uid, id, updates)
+      } else {
+        setLocalMemos((prev) => {
+          const next = prev.map((memo) =>
+            memo.id === id
+              ? { ...memo, ...updates, updatedAt: Date.now() }
+              : memo,
+          )
+          saveLocalMemos(next)
+          return next
+        })
+      }
     },
-    [setMemos]
+    [user],
   )
 
   const deleteMemo = useCallback(
     (id: string) => {
-      setMemos((prev) => prev.filter((memo) => memo.id !== id))
+      if (user) {
+        void removeMemo(user.uid, id)
+      } else {
+        setLocalMemos((prev) => {
+          const next = prev.filter((memo) => memo.id !== id)
+          saveLocalMemos(next)
+          return next
+        })
+      }
     },
-    [setMemos]
+    [user],
   )
 
   const getStorageInfo = useCallback(() => {
     const sizeInBytes = calculateStorageSize(memos)
-    // PWA / IndexedDB のときは事実上無制限なので警告を出さない
-    const usingChrome = hasChromeStorage()
+    // Cloud-backed and IndexedDB-backed storage are effectively unbounded;
+    // only chrome.storage.sync (local-only mode) has a meaningful quota.
+    const usingChrome = !isCloud && hasChromeStorage()
     const maxSize = usingChrome ? 8192 : Number.POSITIVE_INFINITY
     const usagePercent = usingChrome ? (sizeInBytes / maxSize) * 100 : 0
     const isNearLimit = usingChrome && usagePercent > 80
@@ -169,7 +292,7 @@ export function useMemos() {
         ? Math.max(0, maxSize - sizeInBytes)
         : Number.POSITIVE_INFINITY,
     }
-  }, [memos])
+  }, [memos, isCloud])
 
   return { memos, addMemo, updateMemo, deleteMemo, isLoading, getStorageInfo }
 }
