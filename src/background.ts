@@ -5,8 +5,10 @@
 // keyboard shortcuts stay identical.
 
 const POPUP_PAGE = "popup.html"
-const WINDOW_WIDTH = 480
-const WINDOW_HEIGHT = 720
+// Defaults align with the "large" preset in theme-provider.tsx
+// (WIDTH_PX.large = 1000, HEIGHT_PX.large = 960).
+const WINDOW_WIDTH = 1000
+const WINDOW_HEIGHT = 960
 const STATE_KEY = "colason:windowState"
 
 interface PersistedWindowState {

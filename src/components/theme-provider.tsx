@@ -6,8 +6,8 @@ type SizeOption = "small" | "medium" | "large"
 
 const WIDTH_PX: Record<SizeOption, number> = {
   small: 450,
-  medium: 600,
-  large: 800,
+  medium: 700,
+  large: 1000,
 }
 
 const HEIGHT_PX: Record<SizeOption, number> = {

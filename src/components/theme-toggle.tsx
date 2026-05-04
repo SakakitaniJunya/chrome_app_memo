@@ -31,8 +31,8 @@ export function ThemeToggle() {
 
   const widthOptions: { value: SizeOption; label: string; size: string }[] = [
     { value: "small", label: "S", size: "450px" },
-    { value: "medium", label: "M", size: "600px" },
-    { value: "large", label: "L", size: "800px" },
+    { value: "medium", label: "M", size: "700px" },
+    { value: "large", label: "L", size: "1000px" },
   ]
 
   const heightOptions: { value: SizeOption; label: string; size: string }[] = [

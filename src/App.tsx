@@ -85,7 +85,7 @@ function AppContent() {
 function App() {
   return (
     <I18nProvider>
-      <ThemeProvider defaultTheme="system" defaultAccent="default">
+      <ThemeProvider defaultTheme="system" defaultAccent="default" defaultWidth="large" defaultHeight="large">
         <AppContent />
       </ThemeProvider>
     </I18nProvider>
