@@ -90,11 +90,11 @@ const translations = {
     storageUsage: "Storage usage",
     deleteOldMemos: "Consider deleting old memos to free up space.",
 
-    // Sync (PWA only)
+    // Sync
     sync: "Sync",
-    syncDisabled: "Cloud sync is not configured",
+    syncDisabled: "Cloud sync is not available",
     syncDisabledHint:
-      "Set VITE_FIREBASE_* in web/.env to enable Google sign-in.",
+      "chrome.identity is unavailable. Reload the extension or check that the OAuth client_id in manifest.json is wired to a Chrome Extension type credential.",
     syncSignedOut: "Local-only mode",
     syncSignedIn: "Synced to cloud",
     signInWithGoogle: "Sign in with Google",
@@ -187,11 +187,11 @@ const translations = {
     storageUsage: "使用量",
     deleteOldMemos: "古いメモを削除して容量を確保してください。",
 
-    // Sync (PWA only)
+    // Sync
     sync: "同期",
-    syncDisabled: "クラウド同期は未設定です",
+    syncDisabled: "クラウド同期が利用できません",
     syncDisabledHint:
-      "web/.env に VITE_FIREBASE_* を設定すると Google ログインが有効になります。",
+      "chrome.identity が利用できません。拡張を再読み込みするか、manifest.json の OAuth client_id が Chrome Extension タイプの認証情報と紐付いているか確認してください。",
     syncSignedOut: "ローカルのみで動作中",
     syncSignedIn: "クラウドに同期中",
     signInWithGoogle: "Google でログイン",
