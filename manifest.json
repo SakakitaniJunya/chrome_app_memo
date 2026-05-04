@@ -1,7 +1,7 @@
 {
   "name": "Colason",
   "description": "A rich memo app with Markdown and Mermaid diagram support. Opens in a standalone window like LINE for PC.",
-  "version": "1.5",
+  "version": "1.6",
   "manifest_version": 3,
   "permissions": ["storage"],
   "background": {

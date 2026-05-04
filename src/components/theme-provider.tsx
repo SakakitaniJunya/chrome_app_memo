@@ -4,11 +4,24 @@ type Theme = "dark" | "light" | "system"
 type AccentColor = "default" | "blue" | "green" | "purple" | "orange" | "rose"
 type SizeOption = "small" | "medium" | "large"
 
+const WIDTH_PX: Record<SizeOption, number> = {
+  small: 450,
+  medium: 600,
+  large: 800,
+}
+
+const HEIGHT_PX: Record<SizeOption, number> = {
+  small: 600,
+  medium: 760,
+  large: 960,
+}
+
 type ThemeProviderProps = {
   children: React.ReactNode
   defaultTheme?: Theme
   defaultAccent?: AccentColor
   defaultWidth?: SizeOption
+  defaultHeight?: SizeOption
   storageKey?: string
 }
 
@@ -16,18 +29,22 @@ type ThemeProviderState = {
   theme: Theme
   accent: AccentColor
   width: SizeOption
+  height: SizeOption
   setTheme: (theme: Theme) => void
   setAccent: (accent: AccentColor) => void
   setWidth: (width: SizeOption) => void
+  setHeight: (height: SizeOption) => void
 }
 
 const initialState: ThemeProviderState = {
   theme: "system",
   accent: "default",
   width: "medium",
+  height: "medium",
   setTheme: () => null,
   setAccent: () => null,
   setWidth: () => null,
+  setHeight: () => null,
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
@@ -46,18 +63,20 @@ export function ThemeProvider({
   defaultTheme = "system",
   defaultAccent = "default",
   defaultWidth = "medium",
+  defaultHeight = "medium",
   storageKey = "memo-theme",
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme)
   const [accent, setAccent] = useState<AccentColor>(defaultAccent)
   const [width, setWidth] = useState<SizeOption>(defaultWidth)
+  const [height, setHeight] = useState<SizeOption>(defaultHeight)
   const [isLoaded, setIsLoaded] = useState(false)
 
   useEffect(() => {
     // Load settings from Chrome storage
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.sync.get(
-        [storageKey, `${storageKey}-accent`, `${storageKey}-width`],
+        [storageKey, `${storageKey}-accent`, `${storageKey}-width`, `${storageKey}-height`],
         (result) => {
           if (result[storageKey]) {
             setTheme(result[storageKey] as Theme)
@@ -68,6 +87,9 @@ export function ThemeProvider({
           if (result[`${storageKey}-width`]) {
             setWidth(result[`${storageKey}-width`] as SizeOption)
           }
+          if (result[`${storageKey}-height`]) {
+            setHeight(result[`${storageKey}-height`] as SizeOption)
+          }
           setIsLoaded(true)
         }
       )
@@ -76,9 +98,11 @@ export function ThemeProvider({
       const storedTheme = localStorage.getItem(storageKey) as Theme
       const storedAccent = localStorage.getItem(`${storageKey}-accent`) as AccentColor
       const storedWidth = localStorage.getItem(`${storageKey}-width`) as SizeOption
+      const storedHeight = localStorage.getItem(`${storageKey}-height`) as SizeOption
       if (storedTheme) setTheme(storedTheme)
       if (storedAccent) setAccent(storedAccent)
       if (storedWidth) setWidth(storedWidth)
+      if (storedHeight) setHeight(storedHeight)
       setIsLoaded(true)
     }
   }, [storageKey])
@@ -104,7 +128,7 @@ export function ThemeProvider({
     root.style.setProperty("--primary", colors.primary)
     root.style.setProperty("--primary-foreground", colors.primaryForeground)
 
-    // Width
+    // Width (CSS class for in-popup layout)
     root.classList.remove("width-small", "width-medium", "width-large")
     root.classList.add(`width-${width}`)
 
@@ -114,21 +138,39 @@ export function ThemeProvider({
         [storageKey]: theme,
         [`${storageKey}-accent`]: accent,
         [`${storageKey}-width`]: width,
+        [`${storageKey}-height`]: height,
       })
     } else {
       localStorage.setItem(storageKey, theme)
       localStorage.setItem(`${storageKey}-accent`, accent)
       localStorage.setItem(`${storageKey}-width`, width)
+      localStorage.setItem(`${storageKey}-height`, height)
     }
-  }, [theme, accent, width, isLoaded, storageKey])
+
+    // Resize the standalone OS window (PR #13 mode). chrome.runtime.sendMessage
+    // is only available in extension context — silently skip for the PWA build.
+    if (typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
+      try {
+        chrome.runtime.sendMessage({
+          type: "resize",
+          width: WIDTH_PX[width],
+          height: HEIGHT_PX[height],
+        })
+      } catch {
+        // Service worker may be asleep; resize will apply on next open.
+      }
+    }
+  }, [theme, accent, width, height, isLoaded, storageKey])
 
   const value = {
     theme,
     accent,
     width,
+    height,
     setTheme,
     setAccent,
     setWidth,
+    setHeight,
   }
 
   return (
