@@ -1,18 +1,27 @@
+import { useState } from "react"
 import { Settings } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { MemoList } from "@/components/memo-list"
 import { SyncControl } from "@/components/sync-control"
+import { UserBadge } from "@/components/user-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { I18nProvider, useI18n } from "@/lib/i18n"
 
+type TabValue = "memos" | "settings"
+
 function AppContent() {
   const { t } = useI18n()
+  const [activeTab, setActiveTab] = useState<TabValue>("memos")
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <Tabs defaultValue="memos" className="flex-1 flex flex-col">
-        <div className="border-b px-4 py-2 flex items-center justify-between shrink-0">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as TabValue)}
+        className="flex-1 flex flex-col"
+      >
+        <div className="border-b px-4 py-2 flex items-center justify-between shrink-0 gap-2">
           <TabsList className="h-9">
             <TabsTrigger value="memos" className="text-xs">
               {t("memos")}
@@ -22,9 +31,7 @@ function AppContent() {
               {t("settings")}
             </TabsTrigger>
           </TabsList>
-          <div className="text-xs text-muted-foreground">
-            {t("appName")}
-          </div>
+          <UserBadge onOpenSync={() => setActiveTab("settings")} />
         </div>
 
         <TabsContent value="memos" className="flex-1 p-4 mt-0 overflow-hidden">
@@ -38,7 +45,7 @@ function AppContent() {
               <ThemeToggle />
             </div>
 
-            <div className="pt-4 border-t">
+            <div id="sync-section" className="pt-4 border-t">
               <h2 className="text-lg font-semibold mb-4">{t("sync")}</h2>
               <SyncControl />
             </div>
@@ -91,7 +98,12 @@ function AppContent() {
 function App() {
   return (
     <I18nProvider>
-      <ThemeProvider defaultTheme="system" defaultAccent="default">
+      <ThemeProvider
+        defaultTheme="system"
+        defaultAccent="default"
+        defaultWidth="large"
+        defaultHeight="large"
+      >
         <AppContent />
       </ThemeProvider>
     </I18nProvider>
