@@ -30,7 +30,7 @@
     "128": "images/get_started128.png"
   },
   "oauth2": {
-    "client_id": "REPLACE_ME.apps.googleusercontent.com",
+    "client_id": "1038875178392-gk4986sids2099jdgpao6i3rlhjh4brk.apps.googleusercontent.com",
     "scopes": [
       "openid",
       "email",
