@@ -171,6 +171,17 @@ export function MemoList() {
   const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
+    const handler = (e: Event) => {
+      const { id } = (e as CustomEvent<{ id: string }>).detail
+      setEditingId(null)
+      setIsCreating(false)
+      setSelectedId(id)
+    }
+    window.addEventListener("colason:select-memo", handler)
+    return () => window.removeEventListener("colason:select-memo", handler)
+  }, [])
+
+  useEffect(() => {
     const handler = () => {
       setEditingId(null)
       setIsCreating(true)
