@@ -1,21 +1,45 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Settings } from "lucide-react"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { MemoList } from "@/components/memo-list"
+import { SearchModal } from "@/components/search-modal"
 import { SyncControl } from "@/components/sync-control"
 import { UserBadge } from "@/components/user-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { I18nProvider, useI18n } from "@/lib/i18n"
+import type { Memo } from "@/hooks/use-chrome-storage"
 
 type TabValue = "memos" | "settings"
 
 function AppContent() {
   const { t } = useI18n()
   const [activeTab, setActiveTab] = useState<TabValue>("memos")
+  const [searchOpen, setSearchOpen] = useState(false)
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault()
+        setSearchOpen((v) => !v)
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [])
+
+  const handleSelectMemo = (memo: Memo) => {
+    setActiveTab("memos")
+    window.dispatchEvent(new CustomEvent("colason:select-memo", { detail: { id: memo.id } }))
+  }
 
   return (
     <div className="h-screen flex flex-col bg-background">
+      <SearchModal
+        open={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        onSelect={handleSelectMemo}
+      />
       <Tabs
         value={activeTab}
         onValueChange={(value) => setActiveTab(value as TabValue)}
