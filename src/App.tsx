@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { MemoList } from "@/components/memo-list"
 import { SearchModal } from "@/components/search-modal"
 import { SyncControl } from "@/components/sync-control"
+import { ImportExport } from "@/components/import-export"
 import { UserBadge } from "@/components/user-badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { I18nProvider, useI18n } from "@/lib/i18n"
@@ -72,6 +73,11 @@ function AppContent() {
             <div id="sync-section" className="pt-4 border-t">
               <h2 className="text-lg font-semibold mb-4">{t("sync")}</h2>
               <SyncControl />
+            </div>
+
+            <div className="pt-4 border-t">
+              <h2 className="text-lg font-semibold mb-4">{t("importExport")}</h2>
+              <ImportExport />
             </div>
 
             <div className="pt-4 border-t">

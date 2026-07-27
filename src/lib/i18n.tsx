@@ -99,6 +99,15 @@ const translations = {
     syncSignedIn: "Synced to cloud",
     signInWithGoogle: "Sign in with Google",
     signOut: "Sign out",
+
+    // Import / Export
+    importExport: "Import / Export",
+    importExportDesc: "Export all memos as JSON or Markdown, and import from files.",
+    exportLabel: "Export",
+    importLabel: "Import",
+    importSuccessJson: "Imported {n} memo(s) from JSON.",
+    importSuccessMd: "Imported {n} memo(s) from Markdown.",
+    importError: "Import failed. Check the file format.",
   },
   ja: {
     // App
@@ -196,6 +205,15 @@ const translations = {
     syncSignedIn: "クラウドに同期中",
     signInWithGoogle: "Google でログイン",
     signOut: "ログアウト",
+
+    // Import / Export
+    importExport: "インポート / エクスポート",
+    importExportDesc: "全メモを JSON または Markdown で書き出したり、ファイルから読み込みます。",
+    exportLabel: "エクスポート",
+    importLabel: "インポート",
+    importSuccessJson: "{n} 件のメモを JSON からインポートしました。",
+    importSuccessMd: "{n} 件のメモを Markdown からインポートしました。",
+    importError: "インポートに失敗しました。ファイル形式を確認してください。",
   },
 }
 
